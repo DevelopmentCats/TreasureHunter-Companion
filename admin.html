@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Treasurehunter Companion</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Treasurehunter Companion</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="map.html">Map</a></li>
+                <li><a href="#">Build Planner</a></li>
+                <li><a href="#">Combat Simulator</a></li>
+                <li><a href="#">Inventory</a></li>
+                <li><a href="#">Market</a></li>
+                <li id="login-link"><a href="login.html">Login</a></li>
+                <li id="logout-link" style="display: none;"><a href="#" onclick="logout()">Logout</a></li>
+                <li id="admin-link" style="display: none;"><a href="admin.html">Admin Panel</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>Admin Panel</h2>
+        <div id="admin-sections">
+            <section id="map-requests">
+                <h3>Approve Map Change Requests</h3>
+                <div id="tabs">
+                    <button id="pending-tab" class="active">Pending Requests</button>
+                    <button id="history-tab">Request History</button>
+                </div>
+                <button id="clear-map-btn">Clear Map Data</button>
+                <div id="requests-container"></div>
+            </section>
+            <section id="user-management">
+                <h3>User Management</h3>
+                <div id="user-list"></div>
+            </section>
+            <section id="site-statistics">
+                <h3>Site Statistics</h3>
+                <div id="statistics"></div>
+            </section>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+    </footer>
+    <script src="js/auth.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>

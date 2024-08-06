@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasurehunter Map</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <header>
+        <h1>Treasurehunter Companion</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="map.html">Map</a></li>
+                <li><a href="#">Build Planner</a></li>
+                <li><a href="#">Combat Simulator</a></li>
+                <li><a href="#">Inventory</a></li>
+                <li><a href="#">Market</a></li>
+                <li id="login-link"><a href="login.html">Login</a></li>
+                <li id="logout-link" style="display: none;"><a href="#" onclick="logout()">Logout</a></li>
+                <li id="admin-link" style="display: none;"><a href="admin.html">Admin Panel</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>Treasurehunter Map</h2>
+        <div id="map-container">
+            <canvas id="map"></canvas>
+            <div id="map-sidebar">
+                <div id="map-key">
+                    <h2>Map Key</h2>
+                    <ul>
+                        <li><span class="key-color defense"></span> Defense</li>
+                        <li><span class="key-color ingredient-bag"></span> Ingredient Bag</li>
+                        <li><span class="key-color bag"></span> Bag</li>
+                        <li><span class="key-color health"></span> Health</li>
+                        <li><span class="key-color speed"></span> Speed</li>
+                        <li><span class="key-color attack"></span> Attack</li>
+                        <li><span class="key-color craft-chance"></span> Craft Chance</li>
+                        <li><span class="key-color crit-chance"></span> Crit Chance</li>
+                        <li><span class="key-color clan-base"></span> Clan Base</li>
+                        <li><span class="key-color campfire"></span> Campfire</li>
+                    </ul>
+                </div>
+                <div id="update-request-container">
+                    <h3>Submit Map Update Request</h3>
+                    <form id="update-request-form">
+                        <label for="type">Type:</label>
+                        <select id="type" name="type" required>
+                            <option value="ingredient">Ingredient</option>
+                            <option value="clanBase">Clan Base</option>
+                            <option value="campfire">Campfire</option>
+                        </select>
+
+                        <label for="label">Label:</label>
+                        <input type="text" id="label" name="label" required>
+
+                        <label for="x">X Coordinate:</label>
+                        <input type="number" id="x" name="x" required>
+
+                        <label for="y">Y Coordinate:</label>
+                        <input type="number" id="y" name="y" required>
+
+                        <button type="submit">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+    </footer>
+    <script src="js/auth.js"></script>
+    <script src="js/db.js"></script>
+    <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/map.js"></script>
+    <script type="module" src="js/update-request.js"></script>
+</body>
+</html>
