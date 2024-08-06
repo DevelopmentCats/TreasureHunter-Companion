@@ -1,17 +1,13 @@
-import db from './db.js';
+import { showError } from './utils.js';
 
-function checkAuth() {
-    let user = JSON.parse(localStorage.getItem('user'));
+export function checkAuth() {
+    let token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
     const loginLink = document.getElementById('login-link');
     const logoutLink = document.getElementById('logout-link');
     const adminLink = document.getElementById('admin-link');
 
-    if (user && user.expirationTime < Date.now()) {
-        localStorage.removeItem('user');
-        user = null;
-    }
-
-    if (user) {
+    if (token && user) {
         loginLink.style.display = 'none';
         logoutLink.style.display = 'inline';
         if (isAdmin(user)) {
@@ -26,33 +22,100 @@ function checkAuth() {
     }
 }
 
-function isAdmin(user) {
-    return user && user.is_admin === 1;
+export function isAdmin(user) {
+    return user && user.isAdmin;
 }
 
-function logout() {
+export function logout() {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     checkAuth();
     window.location.href = 'index.html';
 }
 
-function setUserData(userData) {
-    const expirationTime = Date.now() + 3600000; // 1 hour from now
-    const user = {
-        ...userData,
-        expirationTime
-    };
-    localStorage.setItem('user', JSON.stringify(user));
+export function setUserData(userData, token) {
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', token);
     checkAuth();
 }
 
-// Check authentication status on page load
-document.addEventListener('DOMContentLoaded', checkAuth);
+export async function refreshUserSession() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        try {
+            const response = await fetch('/api/refresh-session', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setUserData(data.user, data.token);
+                return true;
+            } else {
+                throw new Error('Session refresh failed');
+            }
+        } catch (error) {
+            console.error('Error refreshing session:', error);
+            logout();
+            return false;
+        }
+    }
+    return false;
+}
 
-// Expose functions globally
-window.logout = logout;
-window.setUserData = setUserData;
-window.checkAuth = checkAuth;
+export async function login(username, password) {
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
 
-// Re-check auth status every minute to handle token expiration
-setInterval(checkAuth, 60000);
+        if (response.ok) {
+            const data = await response.json();
+            setUserData(data.user, data.token);
+            return true;
+        } else {
+            const errorData = await response.json();
+            showError(errorData.message || 'Login failed');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        showError('An error occurred during login');
+        return false;
+    }
+}
+
+export async function register(username, password, email) {
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password, email })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            setUserData(data.user, data.token);
+            return true;
+        } else {
+            const errorData = await response.json();
+            showError(errorData.message || 'Registration failed');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error during registration:', error);
+        showError('An error occurred during registration');
+        return false;
+    }
+}
+
+// Initialize auth state when the script loads
+checkAuth();

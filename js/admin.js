@@ -1,5 +1,10 @@
 import { showLoading, hideLoading, showError, showSuccess } from './utils.js';
-import db from './db.js';
+import * as db from './db.js';
+
+function getAuthHeader() {
+    const token = localStorage.getItem('token');
+    return { 'Authorization': `Bearer ${token}` };
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     loadRequests('pending');
@@ -17,9 +22,8 @@ function setupEventListeners() {
 async function loadRequests(type) {
     showLoading();
     try {
-        const status = type === 'pending' ? 'pending' : ['approved', 'rejected'];
-        const [rows] = await db.query('SELECT * FROM update_requests WHERE status IN (?)', [status]);
-        displayRequests(rows, type);
+        const requests = await db.getUpdateRequests(type);
+        displayRequests(requests, type);
     } catch (error) {
         showError('Error loading requests');
     } finally {
@@ -40,8 +44,11 @@ async function clearMapData() {
     if (confirm('Are you sure you want to clear all map data? This action cannot be undone.')) {
         showLoading();
         try {
-            await db.query('DELETE FROM map_data');
+            await db.clearGameElements();
             showSuccess('Map data cleared successfully');
+            if (typeof refreshMap === 'function') {
+                refreshMap();
+            }
         } catch (error) {
             showError('Error clearing map data');
         } finally {
@@ -53,10 +60,10 @@ async function clearMapData() {
 async function listUsers() {
     showLoading();
     try {
-        const [rows] = await db.query('SELECT id, username, is_admin FROM users');
+        const users = await db.getUsers();
         const userList = document.getElementById('user-list');
         userList.innerHTML = '';
-        rows.forEach(user => {
+        users.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
             userElement.innerHTML = `
@@ -76,7 +83,8 @@ async function listUsers() {
 async function toggleAdminStatus(userId) {
     showLoading();
     try {
-        await db.query('UPDATE users SET is_admin = NOT is_admin WHERE id = ?', [userId]);
+        const user = await db.getUserById(userId);
+        await db.updateUser(userId, { is_admin: !user.is_admin });
         showSuccess('User admin status updated');
         listUsers();
     } catch (error) {
@@ -90,7 +98,7 @@ async function deleteUser(userId) {
     if (confirm('Are you sure you want to delete this user?')) {
         showLoading();
         try {
-            await db.query('DELETE FROM users WHERE id = ?', [userId]);
+            await db.deleteUser(userId);
             showSuccess('User deleted successfully');
             listUsers();
         } catch (error) {
@@ -104,20 +112,13 @@ async function deleteUser(userId) {
 async function displayStatistics() {
     showLoading();
     try {
-        const [userCount] = await db.query('SELECT COUNT(*) as count FROM users');
-        const [requestCount] = await db.query('SELECT COUNT(*) as count FROM update_requests');
-        const [pendingCount] = await db.query('SELECT COUNT(*) as count FROM update_requests WHERE status = "pending"');
-        const [approvedCount] = await db.query('SELECT COUNT(*) as count FROM update_requests WHERE status = "approved"');
-        const [rejectedCount] = await db.query('SELECT COUNT(*) as count FROM update_requests WHERE status = "rejected"');
-
-        const stats = {
-            totalUsers: userCount[0].count,
-            totalRequests: requestCount[0].count,
-            pendingRequests: pendingCount[0].count,
-            approvedRequests: approvedCount[0].count,
-            rejectedRequests: rejectedCount[0].count,
-        };
-
+        const response = await fetch('/api/statistics', {
+            headers: getAuthHeader()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch statistics');
+        }
+        const stats = await response.json();
         const statsContainer = document.getElementById('statistics');
         statsContainer.innerHTML = `
             <p>Total Users: ${stats.totalUsers}</p>
@@ -136,25 +137,39 @@ async function displayStatistics() {
 async function approveRequest(requestId) {
     showLoading();
     try {
-        const [request] = await db.query('SELECT * FROM update_requests WHERE id = ?', [requestId]);
-        if (request.length === 0) {
-            throw new Error('Request not found');
+        const response = await fetch(`/api/update-requests/${requestId}/approve`, {
+            method: 'POST',
+            headers: getAuthHeader()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to approve request');
         }
-
-        await db.query('INSERT INTO map_data (type, label, x, y) VALUES (?, ?, ?, ?)', 
-            [request[0].type, request[0].label, request[0].x, request[0].y]);
-        
-        await db.query('UPDATE update_requests SET status = "implemented" WHERE id = ?', [requestId]);
-        
         showSuccess('Request approved and added to map successfully');
         loadRequests('pending');
-        // Refresh the map if we're on the map page
-        if (typeof initMap === 'function') {
-            initMap();
+        if (typeof refreshMap === 'function') {
+            refreshMap();
         }
     } catch (error) {
-        console.error('Error approving request:', error);
         showError('Failed to approve request');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function rejectRequest(requestId) {
+    showLoading();
+    try {
+        const response = await fetch(`/api/update-requests/${requestId}/reject`, {
+            method: 'POST',
+            headers: getAuthHeader()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to reject request');
+        }
+        showSuccess('Request rejected successfully');
+        loadRequests('pending');
+    } catch (error) {
+        showError('Failed to reject request');
     } finally {
         hideLoading();
     }
@@ -187,23 +202,8 @@ function createRequestElement(request, type) {
     return requestElement;
 }
 
-async function rejectRequest(requestId) {
-    showLoading();
-    try {
-        await db.query('UPDATE update_requests SET status = "rejected" WHERE id = ?', [requestId]);
-        showSuccess('Request rejected successfully');
-        loadRequests('pending');
-    } catch (error) {
-        console.error('Error rejecting request:', error);
-        showError('Failed to reject request');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Expose functions to the global scope
+// Expose functions to global scope for use in HTML
 window.toggleAdminStatus = toggleAdminStatus;
 window.deleteUser = deleteUser;
-window.clearMapData = clearMapData;
 window.approveRequest = approveRequest;
 window.rejectRequest = rejectRequest;

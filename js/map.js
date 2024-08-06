@@ -1,5 +1,4 @@
 import { showLoading, hideLoading, showError } from './utils.js';
-import db from './db.js';
 
 const canvas = document.getElementById('map');
 const ctx = canvas.getContext('2d');
@@ -11,10 +10,21 @@ canvas.height = 900;
 // Define map boundaries
 const mapBoundary = 450;
 
+function getAuthHeader() {
+    const token = localStorage.getItem('token');
+    return { 'Authorization': `Bearer ${token}` };
+}
+
 async function loadMapData() {
     showLoading();
     try {
-        const [mapData] = await db.query('SELECT * FROM map_data');
+        const response = await fetch('/api/map-data', {
+            headers: getAuthHeader()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch map data');
+        }
+        const mapData = await response.json();
         return mapData;
     } catch (error) {
         console.error('Error loading map data:', error);
@@ -46,24 +56,28 @@ function drawMap(mapData) {
         const x = (element.x + mapBoundary) * (canvas.width / (2 * mapBoundary));
         const y = (mapBoundary - element.y) * (canvas.height / (2 * mapBoundary));
 
-        ctx.fillStyle = getColorForType(element.type);
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = getColorForType(element.type);
         ctx.fill();
 
         ctx.fillStyle = 'black';
         ctx.font = '12px Arial';
-        ctx.fillText(element.label, x + 8, y + 4);
+        ctx.fillText(element.label, x + 10, y);
     });
 }
 
 function getColorForType(type) {
-    const colors = {
-        'ingredient': '#ff0000',
-        'clanBase': '#0000ff',
-        'campfire': '#ffa500'
-    };
-    return colors[type] || '#000000';
+    switch (type) {
+        case 'ingredient':
+            return 'green';
+        case 'clanBase':
+            return 'blue';
+        case 'campfire':
+            return 'red';
+        default:
+            return 'gray';
+    }
 }
 
 async function initMap() {
@@ -71,8 +85,31 @@ async function initMap() {
     drawMap(mapData);
 }
 
-// Initialize the map when the page loads
-document.addEventListener('DOMContentLoaded', initMap);
+async function refreshMap() {
+    const mapData = await loadMapData();
+    drawMap(mapData);
+}
 
-// Expose the initMap function globally for potential use in other scripts
+function setupRealTimeUpdates() {
+    const eventSource = new EventSource('/api/map-updates');
+    eventSource.onmessage = async (event) => {
+        const update = JSON.parse(event.data);
+        if (update.type === 'mapUpdate') {
+            await refreshMap();
+        }
+    };
+    eventSource.onerror = (error) => {
+        console.error('EventSource failed:', error);
+        eventSource.close();
+    };
+}
+
+// Initialize the map when the page loads
+window.addEventListener('load', () => {
+    initMap();
+    setupRealTimeUpdates();
+});
+
+// Expose the initMap and refreshMap functions to the global scope
 window.initMap = initMap;
+window.refreshMap = refreshMap;

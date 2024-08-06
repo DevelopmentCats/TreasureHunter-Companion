@@ -1,320 +1,125 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
 }
 
 header {
-    background-color: #333;
-    color: white;
-    padding: 1rem;
-}
-
-nav ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-nav ul li {
-    display: inline;
-    margin-right: 1rem;
-}
-
-nav ul li a {
-    color: white;
-    text-decoration: none;
-}
-
-main {
-    padding: 1rem;
-}
-
-footer {
-    background-color: #333;
-    color: white;
-    padding: 1rem;
-    text-align: center;
-}
-
-.map-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-#map {
-    border: 1px solid #ccc;
-}
-
-.map-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-#map-key, .update-request-container {
-    background-color: #f0f0f0;
-    padding: 1rem;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 250px;
-}
-
-#map-key h2 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-}
-
-#map-key ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-#map-key li {
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.key-color {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
-    border-radius: 3px;
-}
-
-.attack { background-color: #FF0000; }
-.health { background-color: #4CAF50; }
-.defense { background-color: #87CEEB; }
-.speed { background-color: #FFFF00; }
-.crit-chance { background-color: #FFA500; }
-.ingredient-bag { background-color: #6A0DAD; }
-.craft-chance { background-color: #0000CD; }
-.bag { background-color: #D8BFD8; }
-.clan-base { background-color: #8B4513; }
-.campfire { background-color: #FF4500; }
-
-.update-request-container {
-    margin-top: 0;
-}
-
-#update-request-form {
-    display: flex;
-    flex-direction: column;
-}
-
-#update-request-form label {
-    margin-top: 1rem;
-}
-
-#update-request-form input,
-#update-request-form select {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    font-size: 1rem;
-}
-
-#update-request-form button {
-    margin-top: 1rem;
-    padding: 0.5rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-#update-request-form button:hover {
-    background-color: #45a049;
-}
-
-#tabs {
-    margin-bottom: 20px;
-}
-
-#tabs button {
-    padding: 10px 20px;
-    border: none;
-    background-color: #f0f0f0;
-    cursor: pointer;
-}
-
-#tabs button.active {
-    background-color: #ddd;
-    font-weight: bold;
-}
-
-.request {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-#clear-map-btn {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-#clear-map-btn:hover {
-    background-color: #c82333;
-}
-
-#loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.message {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    border-radius: 5px;
-    color: white;
-    font-weight: bold;
-    z-index: 1001;
-}
-
-.message.error {
-    background-color: #e74c3c;
-}
-
-.message.success {
-    background-color: #2ecc71;
-}
-
-/* Admin Panel Styles */
-#admin-sections {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-
-#admin-sections > section {
-    flex: 1 1 300px;
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 5px;
+    background-color: #2c3e50;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-#admin-sections h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 5px;
+nav ul li a {
+    transition: color 0.3s ease;
 }
 
-#tabs {
-    margin-bottom: 20px;
+nav ul li a:hover {
+    color: #3498db;
+}
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.map-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+}
+
+#map {
+    border-radius: 4px;
+}
+
+#map-key, .update-request-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#update-request-form input,
+#update-request-form select,
+#update-request-form button {
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#update-request-form input:focus,
+#update-request-form select:focus {
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5);
+}
+
+#update-request-form button {
+    background-color: #3498db;
+}
+
+#update-request-form button:hover {
+    background-color: #2980b9;
 }
 
 #tabs button {
-    padding: 10px 20px;
-    border: none;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    transition: background-color 0.3s;
+    border-radius: 4px 4px 0 0;
+    transition: background-color 0.3s ease;
 }
 
 #tabs button.active {
-    background-color: #007bff;
+    background-color: #3498db;
     color: white;
-    font-weight: bold;
 }
 
 .request, .user-item {
     background-color: white;
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
 }
 
-.request p, .user-item span {
-    margin: 5px 0;
+.request:hover, .user-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .request button, .user-item button, #clear-map-btn {
-    margin-top: 10px;
-    padding: 5px 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background-color 0.3s;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, transform 0.1s ease;
 }
 
 .request button:hover, .user-item button:hover, #clear-map-btn:hover {
-    background-color: #0056b3;
+    transform: translateY(-1px);
 }
 
-#clear-map-btn {
-    background-color: #dc3545;
+.request button:active, .user-item button:active, #clear-map-btn:active {
+    transform: translateY(1px);
 }
 
-#clear-map-btn:hover {
-    background-color: #c82333;
+#loading-overlay {
+    backdrop-filter: blur(5px);
 }
 
-#statistics p {
-    margin: 10px 0;
-    font-size: 16px;
+.spinner {
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
 }
 
-#user-list {
-    max-height: 400px;
-    overflow-y: auto;
+.message {
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.user-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+footer {
+    background-color: #2c3e50;
+    color: #ecf0f1;
 }
 
-.user-item button {
-    margin-left: 10px;
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
-    #admin-sections {
+    .map-container {
         flex-direction: column;
     }
 
-    #admin-sections > section {
-        flex: 1 1 100%;
+    #map-key, .update-request-container {
+        width: 100%;
+        margin-top: 1rem;
     }
 }
