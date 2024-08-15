@@ -1,5 +1,5 @@
-import { hashPassword, showError, showSuccess, showLoading, hideLoading } from './utils.js';
-import db from './db.js';
+import { showError, showSuccess, showLoading, hideLoading } from './utils.js';
+import { register } from './auth.js';
 
 const registerForm = document.getElementById('register-form');
 
@@ -19,29 +19,18 @@ registerForm.addEventListener('submit', async (e) => {
     }
 
     try {
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, email, password }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
+        const success = await register(username, email, password);
+        if (success) {
             showSuccess('Registration successful! Please log in.');
-            window.location.href = 'login.html';
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
         } else {
-            throw new Error(data.error);
+            throw new Error('Registration failed');
         }
     } catch (error) {
         console.error('Registration error:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
-            showError('Username or email already exists');
-        } else {
-            showError('An error occurred during registration. Please try again.');
-        }
+        showError('An error occurred during registration. Please try again.');
     } finally {
         hideLoading();
     }

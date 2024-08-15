@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compendium - Treasurehunter Companion</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.tiny.cloud/1/tr3f0pf1110moufp7ep1mrhzb9mrnw1gyz64bo8jyrg3ztgr/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+    <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Treasurehunter Companion</h1>
+            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="#">Wiki</a></li>
+                    <li><a href="#">Inventory</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div id="user-panel-toggle">
+                <span id="user-panel-username"></span>
+                <button id="user-panel-button">▼</button>
+            </div>
+        </div>
+        <div id="user-panel" class="user-panel-collapsed"></div>
+    </header>
+    <main class="compendium-main">
+        <h2 class="compendium-title">Treasurehunter Compendium</h2>
+        <div class="compendium-controls">
+            <div class="search-container">
+                <input type="text" id="search-input" class="compendium-search" placeholder="Search entries...">
+                <button id="search-button" class="compendium-btn compendium-btn-submit">
+                    Search
+                </button>
+            </div>
+            <select id="category-filter" class="compendium-filter">
+                <option value="">All Categories</option>
+                <option value="item">Item</option>
+                <option value="creature">Creature</option>
+                <option value="location">Location</option>
+                <option value="mechanic">Game Mechanic</option>
+            </select>
+            <button id="open-submission-form" class="compendium-btn compendium-btn-submit">Submit Entry</button>
+        </div>
+        <div id="compendium-container" class="compendium-container">
+            <div id="compendium-list" class="compendium-grid"></div>
+        </div>
+        <div id="pagination-controls" class="compendium-pagination">
+            <button id="prev-page" class="compendium-btn compendium-btn-page">Previous</button>
+            <span id="page-info" class="compendium-page-info"></span>
+            <button id="next-page" class="compendium-btn compendium-btn-page">Next</button>
+        </div>
+        <div id="loading-animation" class="loading-animation">
+            <div class="spinner"></div>
+        </div>
+    </main>
+    <div id="compendium-submission-modal" class="compendium-modal">
+        <div class="compendium-modal-content">
+            <div class="modal-header">
+                <h2>Create Compendium Entry</h2>
+                <span class="compendium-close">&times;</span>
+            </div>
+            <form id="new-entry-form">
+                <div class="form-columns">
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label for="entry-name">Name:</label>
+                            <input type="text" id="entry-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="entry-category">Category:</label>
+                            <select id="entry-category" name="category" required>
+                                <option value="">Select a category</option>
+                            </select>
+                            <input type="text" id="new-category-input" name="newCategory" placeholder="Enter new category name" style="display: none;">
+                        </div>
+                        <div class="form-group">
+                            <label for="entry-tags">Tags:</label>
+                            <input type="text" id="tag-input" placeholder="Enter tags...">
+                            <div id="tag-suggestions"></div>
+                            <div class="tag-container"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="entry-image">Image:</label>
+                            <div id="image-drop-zone">
+                                <p>Drop image here or click to upload</p>
+                                <input type="file" id="entry-image" name="image" accept="image/*" style="display: none;">
+                            </div>
+                            <div id="image-preview"></div>
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label for="tinymce-editor">Description:</label>
+                            <div id="tinymce-editor"></div>
+                            <div id="char-count">Character count: 0</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Custom Fields:</label>
+                            <div id="dynamic-fields"></div>
+                            <button type="button" id="add-field-btn" class="btn btn-secondary">Add Custom Field</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="clear-form-btn" class="btn btn-secondary">Clear Form</button>
+                    <button type="button" id="preview-btn" class="btn btn-secondary">Preview</button>
+                    <button type="submit" class="btn btn-primary">Submit Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="compendium-edit-modal" class="compendium-modal">
+        <div class="compendium-modal-content">
+            <div class="modal-header">
+                <h2>Edit Compendium Entry</h2>
+                <span class="compendium-close">&times;</span>
+            </div>
+            <form id="edit-entry-form">
+                <div class="form-columns">
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label for="edit-entry-name">Name:</label>
+                            <input type="text" id="edit-entry-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-entry-category">Category:</label>
+                            <select id="edit-entry-category" name="category" required>
+                                <option value="">Select a category</option>
+                            </select>
+                            <input type="text" id="edit-new-category-input" name="newCategory" placeholder="Enter new category name" style="display: none;">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-entry-tags">Tags:</label>
+                            <input type="text" id="edit-tag-input" placeholder="Enter tags...">
+                            <div id="edit-tag-suggestions"></div>
+                            <div id="edit-tag-container"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-entry-image">Image:</label>
+                            <div id="edit-image-drop-zone" class="image-drop-zone">
+                                <p>Drag & Drop an image here or click to select</p>
+                                <input type="file" id="edit-entry-image" name="image" accept="image/*" style="display: none;">
+                            </div>
+                            <div id="edit-image-preview"></div>
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label for="edit-tinymce-editor">Description:</label>
+                            <div id="edit-tinymce-editor"></div>
+                            <div id="edit-char-count">Character count: 0</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Custom Fields:</label>
+                            <div id="edit-dynamic-fields"></div>
+                            <button type="button" id="edit-add-field-btn" class="btn btn-secondary">Add Custom Field</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="edit-clear-form-btn" class="btn btn-secondary">Clear Form</button>
+                    <button type="button" id="edit-preview-btn" class="btn btn-secondary">Preview</button>
+                    <button type="submit" class="btn btn-primary">Update Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="entry-preview" class="compendium-modal">
+        <div class="compendium-modal-content">
+            <span class="compendium-close">&times;</span>
+            <h3>Entry Preview</h3>
+            <div id="preview-content"></div>
+        </div>
+    </div>
+    <div id="compendium-entry-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="compendium-entry-content"></div>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+    </footer>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import './js/auth.js';
+        import './js/userPanel.js';
+        import './js/compendium.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMobileNavigation();
+            // Any other compendium-specific initialization can go here
+        });
+    </script>
+</body>
+</html>

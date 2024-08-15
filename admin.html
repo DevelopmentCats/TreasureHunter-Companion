@@ -8,47 +8,118 @@
 </head>
 <body>
     <header>
-        <h1>Treasurehunter Companion</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="map.html">Map</a></li>
-                <li><a href="#">Build Planner</a></li>
-                <li><a href="#">Combat Simulator</a></li>
-                <li><a href="#">Inventory</a></li>
-                <li><a href="#">Market</a></li>
-                <li id="login-link"><a href="login.html">Login</a></li>
-                <li id="logout-link" style="display: none;"><a href="#" onclick="logout()">Logout</a></li>
-                <li id="admin-link" style="display: none;"><a href="admin.html">Admin Panel</a></li>
-            </ul>
-        </nav>
+        <div class="header-content">
+            <h1>Treasurehunter Companion</h1>
+            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="#">Wiki</a></li>
+                    <li><a href="#">Inventory</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div id="user-panel-toggle">
+                <span id="user-panel-username"></span>
+                <button id="user-panel-button">▼</button>
+            </div>
+        </div>
+        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
     <main>
         <h2>Admin Panel</h2>
-        <div id="admin-sections">
-            <section id="map-requests">
-                <h3>Approve Map Change Requests</h3>
-                <div id="tabs">
-                    <button id="pending-tab" class="active">Pending Requests</button>
-                    <button id="history-tab">Request History</button>
+        <div class="admin-dashboard">
+            <section id="map-requests" class="admin-card">
+                <h3>Map Change Requests</h3>
+                <div id="tabs" class="tab-container">
+                    <button id="pending-tab" class="tab-button active">Pending Requests</button>
+                    <button id="history-tab" class="tab-button">Request History</button>
                 </div>
-                <button id="clear-map-btn">Clear Map Data</button>
-                <div id="requests-container"></div>
+                <div id="requests-container" class="scrollable-content"></div>
             </section>
-            <section id="user-management">
+            <section id="user-management" class="admin-card">
                 <h3>User Management</h3>
-                <div id="user-list"></div>
+                <div id="create-user-form">
+                    <h4>Create New User</h4>
+                    <form id="new-user-form">
+                        <div class="form-group">
+                            <input type="text" id="new-username" placeholder="Username" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="new-email" placeholder="Email" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="new-password" placeholder="Password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="new-is-admin">
+                                Admin User
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </form>
+                </div>
+                <div id="user-search-container"></div>
+                <div id="user-list-container">
+                    <table id="user-list" class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th class="user-email">Email</th>
+                                <th class="user-admin">Admin</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
-            <section id="site-statistics">
+            <section id="site-statistics" class="admin-card">
                 <h3>Site Statistics</h3>
                 <div id="statistics"></div>
+            </section>
+            <section id="map-management" class="admin-card">
+                <h3>Map Management</h3>
+                <button id="clear-map-btn" class="btn btn-danger">Clear Map Data</button>
+            </section>
+            <section id="compendium-management" class="admin-card">
+                <h3>Compendium Management</h3>
+                <div id="pending-entries" class="scrollable-content">
+                    <h4>Pending Entries</h4>
+                    <div id="pending-entries-list"></div>
+                </div>
             </section>
         </div>
     </main>
     <footer>
         <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
     </footer>
-    <script src="js/auth.js"></script>
-    <script type="module" src="js/admin.js"></script>
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Action</h3>
+            <p id="confirmation-message"></p>
+            <div class="modal-actions">
+                <button id="confirm-yes" class="btn btn-primary">Yes</button>
+                <button id="confirm-no" class="btn btn-secondary">No</button>
+            </div>
+        </div>
+    </div>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import './js/auth.js';
+        import './js/userPanel.js';
+        import './js/admin.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMobileNavigation();
+            // Any other admin-specific initialization can go here
+        });
+    </script>
 </body>
 </html>

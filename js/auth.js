@@ -8,33 +8,50 @@ export function checkAuth() {
     const adminLink = document.getElementById('admin-link');
 
     if (token && user) {
-        loginLink.style.display = 'none';
-        logoutLink.style.display = 'inline';
+        if (loginLink) loginLink.style.display = 'none';
+        if (logoutLink) logoutLink.style.display = 'inline';
         if (isAdmin(user)) {
-            adminLink.style.display = 'inline';
+            if (adminLink) adminLink.style.display = 'inline';
         } else {
-            adminLink.style.display = 'none';
+            if (adminLink) adminLink.style.display = 'none';
         }
     } else {
-        loginLink.style.display = 'inline';
-        logoutLink.style.display = 'none';
-        adminLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'inline';
+        if (logoutLink) logoutLink.style.display = 'none';
+        if (adminLink) adminLink.style.display = 'none';
     }
 }
 
-export function isAdmin(user) {
-    return user && user.isAdmin;
+export function isAdmin() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user && user.is_admin === true;
+}
+
+export function isLoggedIn() {
+    return !!localStorage.getItem('token');
+}
+
+export function getCurrentUserId() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user ? user.id : null;
 }
 
 export function logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('userId');
     checkAuth();
     window.location.href = 'index.html';
 }
 
 export function setUserData(userData, token) {
-    localStorage.setItem('user', JSON.stringify(userData));
+    const user = {
+        id: userData.id,
+        username: userData.username,
+        is_admin: userData.isAdmin === 1
+    };
+    localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
     checkAuth();
 }
@@ -91,31 +108,35 @@ export async function login(username, password) {
     }
 }
 
-export async function register(username, password, email) {
+export async function register(username, email, password) {
     try {
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username, password, email })
+            body: JSON.stringify({ username, email, password })
         });
 
+        const data = await response.json();
+
         if (response.ok) {
-            const data = await response.json();
-            setUserData(data.user, data.token);
             return true;
         } else {
-            const errorData = await response.json();
-            showError(errorData.message || 'Registration failed');
-            return false;
+            throw new Error(data.error || 'Registration failed');
         }
     } catch (error) {
         console.error('Error during registration:', error);
-        showError('An error occurred during registration');
-        return false;
+        throw error;
     }
 }
 
 // Initialize auth state when the script loads
 checkAuth();
+
+// Make functions available globally
+window.logout = logout;
+window.isAdmin = isAdmin;
+window.login = login;
+window.register = register;
+

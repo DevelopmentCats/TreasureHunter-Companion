@@ -8,44 +8,67 @@
 </head>
 <body>
     <header>
-        <h1>Treasurehunter Companion</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="map.html">Map</a></li>
-                <li><a href="#">Build Planner</a></li>
-                <li><a href="#">Combat Simulator</a></li>
-                <li><a href="#">Inventory</a></li>
-                <li><a href="#">Market</a></li>
-                <li id="login-link"><a href="login.html">Login</a></li>
-                <li id="logout-link" style="display: none;"><a href="#" onclick="logout()">Logout</a></li>
-                <li id="admin-link" style="display: none;"><a href="admin.html">Admin Panel</a></li>
-            </ul>
-        </nav>
+        <div class="header-content">
+            <h1>Treasurehunter Companion</h1>
+            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="#">Wiki</a></li>
+                    <li><a href="#">Inventory</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div id="user-panel-toggle">
+                <span id="user-panel-username"></span>
+                <button id="user-panel-button">▼</button>
+            </div>
+        </div>
+        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
     <main>
-        <h2>Register</h2>
-        <form id="register-form">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-
-            <label for="confirm-password">Confirm Password:</label>
-            <input type="password" id="confirm-password" name="confirm-password" required>
-
-            <button type="submit">Register</button>
-        </form>
-        <p>Already have an account? <a href="login.html">Login here</a></p>
+        <div class="auth-container">
+            <h2>Register</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password:</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+            <p>Already have an account? <a href="login.html">Login here</a></p>
+        </div>
     </main>
     <footer>
         <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
     </footer>
-    <script src="js/auth.js"></script>
-    <script type="module" src="js/register.js"></script>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import './js/auth.js';
+        import './js/userPanel.js';
+        import './js/register.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMobileNavigation();
+            // Any other register-specific initialization can go here
+        });
+    </script>
 </body>
 </html>

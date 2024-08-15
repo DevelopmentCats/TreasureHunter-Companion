@@ -8,28 +8,52 @@
 </head>
 <body>
     <header>
-        <h1>Treasurehunter Companion</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="map.html">Map</a></li>
-                <li><a href="#">Build Planner</a></li>
-                <li><a href="#">Combat Simulator</a></li>
-                <li><a href="#">Inventory</a></li>
-                <li><a href="#">Market</a></li>
-                <li id="login-link"><a href="login.html">Login</a></li>
-                <li id="logout-link" style="display: none;"><a href="#" onclick="logout()">Logout</a></li>
-                <li id="admin-link" style="display: none;"><a href="admin.html">Admin Panel</a></li>
-            </ul>
-        </nav>
+        <div class="header-content">
+            <h1>Treasurehunter Companion</h1>
+            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="#">Wiki</a></li>
+                    <li><a href="#">Inventory</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div id="user-panel-toggle">
+                <span id="user-panel-username"></span>
+                <button id="user-panel-button">▼</button>
+            </div>
+        </div>
+        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
     <main>
-        <h2>Treasurehunter Map</h2>
+        <div class="map-header">
+            <h2>Treasurehunter Map</h2>
+        </div>
+        <div id="map-controls">
+            <button id="zoom-in" class="btn btn-map-control">+</button>
+            <button id="zoom-out" class="btn btn-map-control">-</button>
+            <button id="toggle-grid" class="btn btn-map-control">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z"/>
+                    <path d="M20 3H4c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM8 19H5v-3h3v3zm0-4H5v-3h3v3zm0-4H5V8h3v3zm4 8h-3v-3h3v3zm0-4h-3v-3h3v3zm0-4h-3V8h3v3zm4 8h-3v-3h3v3zm0-4h-3v-3h3v3zm0-4h-3V8h3v3zm3 8h-2v-3h2v3zm0-4h-2v-3h2v3zm0-4h-2V8h2v3z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button id="reset-map-btn" class="btn btn-map-control">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z"/>
+                    <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
         <div id="map-container">
             <canvas id="map"></canvas>
+            <div id="coordinates-display"></div>
             <div id="map-sidebar">
                 <div id="map-key">
-                    <h2>Map Key</h2>
+                    <h3>Map Key</h3>
                     <ul>
                         <li><span class="key-color defense"></span> Defense</li>
                         <li><span class="key-color ingredient-bag"></span> Ingredient Bag</li>
@@ -38,42 +62,57 @@
                         <li><span class="key-color speed"></span> Speed</li>
                         <li><span class="key-color attack"></span> Attack</li>
                         <li><span class="key-color craft-chance"></span> Craft Chance</li>
-                        <li><span class="key-color crit-chance"></span> Crit Chance</li>
+                        <li><span class="key-color crit-chance"></span> Critical Chance</li>
                         <li><span class="key-color clan-base"></span> Clan Base</li>
                         <li><span class="key-color campfire"></span> Campfire</li>
                     </ul>
                 </div>
-                <div id="update-request-container">
-                    <h3>Submit Map Update Request</h3>
-                    <form id="update-request-form">
-                        <label for="type">Type:</label>
-                        <select id="type" name="type" required>
-                            <option value="ingredient">Ingredient</option>
-                            <option value="clanBase">Clan Base</option>
-                            <option value="campfire">Campfire</option>
-                        </select>
-
-                        <label for="label">Label:</label>
-                        <input type="text" id="label" name="label" required>
-
-                        <label for="x">X Coordinate:</label>
-                        <input type="number" id="x" name="x" required>
-
-                        <label for="y">Y Coordinate:</label>
-                        <input type="number" id="y" name="y" required>
-
-                        <button type="submit">Submit Request</button>
-                    </form>
+                <div id="button-container">
+                    <button id="open-update-form" class="btn">Submit Map Update</button>
+                </div>
+                <div id="leaderboard-container">
+                    <h3>Top Contributors</h3>
+                    <ul id="leaderboard-list"></ul>
                 </div>
             </div>
         </div>
     </main>
+
+    <div id="update-request-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Submit Map Update Request</h3>
+            <form id="update-request-form">
+                <label for="type">Type:</label>
+                <select id="type" name="type" required></select>
+                <label for="label">Label:</label>
+                <input type="text" id="label" name="label" readonly required>
+                <label for="x">X Coordinate:</label>
+                <input type="number" id="x" name="x" required>
+                <label for="y">Y Coordinate:</label>
+                <input type="number" id="y" name="y" required>
+                <button type="submit" class="btn">Submit Request</button>
+            </form>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
     </footer>
-    <script src="js/auth.js"></script>
-    <script type="module" src="js/utils.js"></script>
-    <script type="module" src="js/map.js"></script>
-    <script type="module" src="js/update-request.js"></script>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import './js/auth.js';
+        import './js/userPanel.js';
+        import './js/map.js';
+        import './js/update-request.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMobileNavigation();
+            // Any other map-specific initialization can go here
+        });
+    </script>
 </body>
 </html>
