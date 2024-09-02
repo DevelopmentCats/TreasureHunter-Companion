@@ -4,59 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Treasurehunter Companion</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <h1>Treasurehunter Companion</h1>
-            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
             <nav id="main-nav">
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="map.html">Map</a></li>
                     <li><a href="compendium.html">Compendium</a></li>
-                    <li><a href="#">Wiki</a></li>
-                    <li><a href="#">Inventory</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
                     <li><a href="#">Market</a></li>
                 </ul>
+                <div class="notification-container hidden">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
             </nav>
-            <div id="user-panel-toggle">
-                <span id="user-panel-username"></span>
-                <button id="user-panel-button">▼</button>
+            <div class="user-panel">
+                <button class="user-panel-toggle">
+                    <span id="user-panel-username">Login</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="login.html">Login</a>
+                    <a href="register.html">Register</a>
+                </div>
             </div>
         </div>
-        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
-    <main>
-        <h2>Login</h2>
-        <form id="login-form">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-
-            <button type="submit">Login</button>
-        </form>
-        <p>Don't have an account? <a href="register.html">Register here</a></p>
+    <main class="auth-main">
+        <section class="auth-container">
+            <h2>Account Login</h2>
+            <form class="auth-form" id="login-form">
+                <div class="form-group">
+                    <input type="text" id="username" name="username" required placeholder=" ">
+                    <label for="username">Username</label>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" name="password" required placeholder=" ">
+                    <label for="password">Password</label>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <p class="auth-links">
+                Don't have an account? <a href="register.html">Register here</a>
+            </p>
+            <p class="auth-links">
+                <a href="#">Forgot password?</a>
+            </p>
+        </section>
     </main>
     <footer>
-        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
     </footer>
     <div class="loading-animation">
         <div class="spinner"></div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
     <script type="module">
         import { setupMobileNavigation } from './js/utils.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
         import './js/auth.js';
         import './js/login.js';
-        import './js/userPanel.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function init() {
+            await initializeBrowserLogger();
             setupMobileNavigation();
-            // Any other login-specific initialization can go here
-        });
+            logger.info('Login page loaded');
+            // Any login-specific initialization can go here
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
     </script>
 </body>
 </html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clan Management - DevCat</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/clan.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="clan-page">
+    <header>
+        <div class="header-content">
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div class="user-panel">
+                <div class="notification-container">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
+                <button class="user-panel-toggle">
+                    <img id="user-panel-avatar" src="/images/default-avatar.jpg" alt="User Avatar">
+                    <span id="user-panel-username"></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    <a href="#" id="logout-link">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="clan-main">
+        <h2>Clan Management</h2>
+        <div class="clan-container">
+            <aside class="clan-sidebar">
+                <div id="user-clan-info">
+                    <h3>Your Clan</h3>
+                    <div id="user-clan-details"></div>
+                    <button id="create-clan-btn" class="btn btn-primary">Create Clan</button>
+                </div>
+                <nav class="clan-nav">
+                    <ul>
+                        <li><a href="#overview" class="active">Overview</a></li>
+                        <li><a href="#members">Members</a></li>
+                        <li><a href="#activities">Recent Activities</a></li>
+                        <li><a href="#all-clans">All Clans</a></li>
+                    </ul>
+                </nav>
+            </aside>
+            <div class="clan-content">
+                <section id="overview" class="clan-section active">
+                    <h3>Clan Overview</h3>
+                    <div id="clan-details"></div>
+                    <div id="clan-management" style="display: none;">
+                        <button id="invite-member-btn" class="btn btn-secondary">Invite Member</button>
+                        <button id="leave-clan-btn" class="btn btn-danger">Leave Clan</button>
+                    </div>
+                </section>
+                <section id="members" class="clan-section">
+                    <h3>Clan Members</h3>
+                    <div id="clan-members"></div>
+                </section>
+                <section id="activities" class="clan-section">
+                    <h3>Recent Activities</h3>
+                    <ul id="clan-activities-list" class="activity-list"></ul>
+                </section>
+                <section id="all-clans" class="clan-section">
+                    <h3>All Clans</h3>
+                    <div id="all-clans-list"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
+    </footer>
+    <div id="create-clan-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create a New Clan</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="create-clan-form">
+                <div class="form-group">
+                    <label for="clan-name">Clan Name:</label>
+                    <input type="text" id="clan-name" name="clan-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="clan-description">Description:</label>
+                    <textarea id="clan-description" name="clan-description" rows="4" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Clan</button>
+                    <button type="button" class="btn btn-secondary" id="cancel-create-clan">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
+        import { isLoggedIn, checkAuth } from './js/auth.js';
+        import './js/userPanel.js';
+        import { loadNotifications } from './js/notifications.js';
+        import { initializeClanPage } from './js/clan.js';
+
+        async function init() {
+            await initializeBrowserLogger();
+            setupMobileNavigation();
+            logger.info('Clan page loaded');
+
+            if (isLoggedIn()) {
+                loadNotifications();
+                await initializeClanPage();
+            } else {
+                window.location.href = 'login.html';
+            }
+
+            checkAuth();
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
+    </script>
+</body>
+</html>

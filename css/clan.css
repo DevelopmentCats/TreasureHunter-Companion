@@ -1,0 +1,430 @@
+/* Clan Page Styles */
+.clan-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+}
+
+.clan-main h2 {
+    font-size: 2.5rem;
+    color: var(--purple);
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.clan-container {
+    display: flex;
+    background-color: var(--current-line);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    min-height: 700px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.clan-sidebar {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    background-color: var(--background);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--comment);
+}
+
+#user-clan-info {
+    margin-bottom: 2rem;
+}
+
+#user-clan-info h3 {
+    color: var(--purple);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+#user-clan-details {
+    background-color: var(--current-line);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+#create-clan-btn {
+    width: 100%;
+}
+
+.clan-nav {
+    margin-top: 2rem;
+}
+
+.clan-nav ul {
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.clan-nav li {
+    margin-bottom: 0.5rem;
+}
+
+.clan-nav a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: var(--foreground);
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.clan-nav a:hover,
+.clan-nav a.active {
+    background-color: var(--selection);
+    color: var(--purple);
+}
+
+.clan-content {
+    flex-grow: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    background-color: var(--background);
+    display: flex;
+    flex-direction: column;
+    min-width: 75%;
+}
+.clan-section {
+    display: none;
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.clan-section.active {
+    display: block;
+}
+
+.clan-section h3 {
+    color: var(--cyan);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--comment);
+    padding-bottom: 0.5rem;
+}
+
+#clan-details,
+#clan-management {
+    margin-bottom: 2rem;
+}
+
+#clan-members {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.clan-member {
+    background-color: var(--current-line);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.clan-member:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.clan-member img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    object-fit: cover;
+}
+
+.clan-member span {
+    margin-bottom: 0.5rem;
+}
+
+.clan-member .remove-member-btn {
+    margin-top: 1rem;
+}
+
+.activity-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.activity-item {
+    background-color: var(--background);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.activity-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.activity-content {
+    flex-grow: 1;
+}
+
+.activity-description {
+    margin-bottom: 0.25rem;
+}
+
+.activity-date {
+    font-size: 0.8rem;
+    color: var(--comment);
+}
+
+#all-clans-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.clan-item {
+    background-color: var(--background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.clan-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.clan-item h4 {
+    color: var(--purple);
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.clan-item p {
+    color: var(--foreground);
+    margin-bottom: 1rem;
+}
+
+.request-join-clan-btn {
+    width: 100%;
+}
+
+.no-clan .clan-sidebar {
+    display: none;
+}
+
+.no-clan .clan-content {
+    width: 100%;
+}
+
+.clan-member .clan-management,
+.no-clan .clan-management {
+    display: none;
+}
+
+.clan-owner .clan-management {
+    display: block;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .clan-main {
+        padding: 10px;
+    }
+
+    .clan-container {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .clan-sidebar {
+        width: 100%;
+        max-width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--comment);
+    }
+
+    .clan-content {
+        min-width: 100%;
+        padding: 1.5rem;
+    }
+
+    .clan-nav ul {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .clan-nav li {
+        margin: 0 0.5rem 0.5rem 0;
+    }
+
+    #clan-members {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    #all-clans-list {
+        grid-template-columns: 1fr;
+    }
+
+    .clan-section {
+        max-width: 100%;
+    }
+}
+
+/* Create Clan Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--background);
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--purple);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--purple);
+    font-size: 1.5rem;
+}
+
+.modal-header .close {
+    font-size: 1.5rem;
+    color: var(--comment);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.modal-header .close:hover {
+    color: var(--foreground);
+}
+
+#create-clan-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+#create-clan-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#create-clan-form label {
+    color: var(--cyan);
+    font-weight: bold;
+}
+
+#create-clan-form input,
+#create-clan-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--current-line);
+    border: 1px solid var(--comment);
+    border-radius: 6px;
+    color: var(--foreground);
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+#create-clan-form input:focus,
+#create-clan-form textarea:focus {
+    border-color: var(--purple);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.2);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.form-actions button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.form-actions .btn-primary {
+    background-color: var(--purple);
+    color: var(--background);
+}
+
+.form-actions .btn-primary:hover {
+    background-color: var(--pink);
+    transform: translateY(-2px);
+}
+
+.form-actions .btn-secondary {
+    background-color: var(--comment);
+    color: var(--background);
+}
+
+.form-actions .btn-secondary:hover {
+    background-color: var(--current-line);
+    transform: translateY(-2px);
+}

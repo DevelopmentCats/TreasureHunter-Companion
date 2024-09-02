@@ -1,30 +1,73 @@
 import { showLoading, hideLoading, showError, showSuccess } from './utils.js';
 import * as api from './api.js';
-import { isAdmin } from './auth.js';
 import { getErrorMessage } from './errorHandler.js';
+import logger from './logger.js';
+import { ROLES, hasPermission, PERMISSIONS, getUserPermissions } from './roles.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (isAdmin()) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (hasPermission(user, PERMISSIONS.MANAGE_USERS)) {
+        logger.info('User has admin access', { userId: user.id, role: user.role });
         setupEventListeners();
+        loadQuickStats();
         loadPendingCompendiumEntries();
         loadRequests('pending');
         listUsers();
-        displayStatistics();
-        setupUserSearch();
+        loadSystemLogs();
     } else {
-        showError('Access denied. Admin privileges required.');
-        document.body.innerHTML = '<h1>Access Denied</h1><p>You do not have admin privileges to view this page.</p>';
+        logger.info('User does not have admin access', { userId: user.id, role: user.role });
+        showError('Access denied. Insufficient permissions.');
+        document.body.innerHTML = '<h1>Access Denied</h1><p>You do not have the required permissions to view this page.</p>';
     }
 });
 
 function setupEventListeners() {
-    document.getElementById('pending-tab').addEventListener('click', () => loadRequests('pending'));
-    document.getElementById('history-tab').addEventListener('click', () => loadRequests('history'));
-    document.getElementById('clear-map-btn').addEventListener('click', clearMapData);
-    document.getElementById('new-user-form').addEventListener('submit', createUser);
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (hasPermission(user, PERMISSIONS.APPROVE_MAP)) {
+        document.getElementById('pending-tab').addEventListener('click', () => loadRequests('pending'));
+        document.getElementById('history-tab').addEventListener('click', () => loadRequests('history'));
+    }
+    if (hasPermission(user, PERMISSIONS.MANAGE_SYSTEM)) {
+        document.getElementById('clear-map-btn').addEventListener('click', clearMapData);
+        document.getElementById('backup-db-btn').addEventListener('click', backupDatabase);
+        document.getElementById('refresh-cache-btn').addEventListener('click', refreshCache);
+    }
+}
+
+async function loadQuickStats() {
+    try {
+        const stats = await api.getStatistics();
+        const statsContainer = document.getElementById('statistics');
+        statsContainer.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-value">${stats.totalUsers || 0}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${stats.totalRequests || 0}</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${stats.pendingRequests || 0}</div>
+                <div class="stat-label">Pending Requests</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${stats.pendingEntries || 0}</div>
+                <div class="stat-label">Pending Entries</div>
+            </div>
+        `;
+    } catch (error) {
+        logger.error('Error loading statistics:', { error: error.message });
+        showError(getErrorMessage(error));
+    }
 }
 
 async function loadPendingCompendiumEntries() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.APPROVE_COMPENDIUM)) {
+        logger.info('User does not have permission to view pending entries', { userId: user.id, role: user.role });
+        return;
+    }
     showLoading();
     try {
         const response = await fetch('/api/admin/pending-compendium-entries', {
@@ -36,7 +79,7 @@ async function loadPendingCompendiumEntries() {
             throw new Error(`Failed to fetch pending entries: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        console.log('Fetched pending entries:', data);
+        logger.info('Fetched pending entries:', { entries: data.entries });
 
         const entries = data.entries;
         
@@ -59,7 +102,7 @@ async function loadPendingCompendiumEntries() {
             const users = await Promise.all(userPromises);
             userMap = Object.fromEntries(users.map(user => [user.id, user.username]));
         } catch (error) {
-            console.error('Error fetching users:', error);
+            logger.error('Error fetching users:', { error: error.message });
             // Continue with empty userMap
         }
 
@@ -70,12 +113,12 @@ async function loadPendingCompendiumEntries() {
             custom_fields: Array.isArray(entry.custom_fields) ? entry.custom_fields :
                            (typeof entry.custom_fields === 'string' ? JSON.parse(entry.custom_fields || '[]') : []),
             submitted_by_username: userMap[entry.submitted_by] || 'Unknown',
-            category_name: entry.category_name || 'Uncategorized'
+            category_name: entry.category_name || entry.category || 'Uncategorized' // Use category_name or category, fallback to 'Uncategorized'
         }));
         
         displayPendingEntries(processedEntries);
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
@@ -87,7 +130,7 @@ function formatCustomFields(customFields) {
     try {
       customFields = JSON.parse(customFields);
     } catch (error) {
-      console.error('Error parsing custom fields:', error);
+      logger.error('Error parsing custom fields:', { error: error.message });
       return 'Error parsing custom fields';
     }
   }
@@ -149,6 +192,11 @@ function setupEntryActionListeners() {
 }
 
 async function approveEntry(entryId) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.APPROVE_COMPENDIUM)) {
+        showError('You do not have permission to approve entries');
+        return;
+    }
     try {
         const response = await fetch(`/api/admin/approve-compendium-entry/${entryId}`, {
             method: 'POST',
@@ -162,13 +210,18 @@ async function approveEntry(entryId) {
         showSuccess('Entry approved successfully');
         loadPendingCompendiumEntries();
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     }
 }
 
 async function rejectEntry(entryId) {
-    console.log('Rejecting entry:', entryId);
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.REJECT_COMPENDIUM)) {
+        showError('You do not have permission to reject entries');
+        return;
+    }
+    logger.info('Rejecting entry:', { entryId });
     try {
         const response = await fetch(`/api/admin/reject-compendium-entry/${entryId}`, {
             method: 'POST',
@@ -181,11 +234,11 @@ async function rejectEntry(entryId) {
             throw new Error(`Failed to reject entry: ${errorData.error || response.statusText}`);
         }
         const result = await response.json();
-        console.log('Entry rejected successfully:', result);
+        logger.info('Entry rejected successfully:', { result });
         showSuccess('Entry rejected successfully');
         await loadPendingCompendiumEntries();
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     }
 }
@@ -196,30 +249,92 @@ function truncateText(text, maxLength) {
     return text.substr(0, maxLength) + '...';
 }
 
-async function loadRequests(type) {
+async function loadRequests(status) {
     showLoading();
     try {
-        const requests = await api.getUpdateRequests(type);
-        displayRequests(requests, type);
+        const response = await fetch(`/api/update-requests?status=${status}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch requests');
+        }
+        const requests = await response.json();
+
+        // Fetch usernames for submitters
+        const userIds = [...new Set(requests.map(request => request.submitted_by_id))];
+        let userMap = {};
+        try {
+            const userPromises = userIds.map(id => 
+                fetch(`/api/users/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                }).then(res => {
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch user ${id}: ${res.status} ${res.statusText}`);
+                    }
+                    return res.json();
+                })
+            );
+            const users = await Promise.all(userPromises);
+            userMap = Object.fromEntries(users.map(user => [user.id, user.username]));
+        } catch (error) {
+            logger.error('Error fetching users:', { error: error.message });
+            // Continue with empty userMap
+        }
+
+        const processedRequests = requests.map(request => ({
+            ...request,
+            submitted_by_username: userMap[request.submitted_by_id] || 'Unknown'
+        }));
+
+        const requestsContainer = document.getElementById('requests-container');
+        requestsContainer.innerHTML = '';
+        processedRequests.forEach(request => {
+            const requestElement = createRequestElement(request, status);
+            requestsContainer.appendChild(requestElement);
+        });
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
     }
 }
 
-function displayRequests(requests, type) {
-    const container = document.getElementById('requests-container');
-    container.innerHTML = '';
-    if (requests.length === 0) {
-        container.innerHTML = '<p>No requests found.</p>';
-        return;
+function createRequestElement(request, type) {
+    const requestElement = document.createElement('div');
+    requestElement.className = 'request-item';
+    requestElement.innerHTML = `
+        <p>Type: ${request.type}</p>
+        <p>Label: ${request.label}</p>
+        <p>Coordinates: (${request.x}, ${request.y})</p>
+        <p>Status: ${request.status}</p>
+        <p>Submitted by: ${request.submitted_by_username}</p>
+    `;
+
+    if (type === 'pending') {
+        const approveButton = document.createElement('button');
+        approveButton.textContent = 'Approve';
+        approveButton.onclick = () => approveRequest(request.id);
+        
+        const rejectButton = document.createElement('button');
+        rejectButton.textContent = 'Reject';
+        rejectButton.onclick = () => rejectRequest(request.id);
+        
+        requestElement.appendChild(approveButton);
+        requestElement.appendChild(rejectButton);
+    } else if (type === 'history' && request.status === 'approved') {
+        const rejectButton = document.createElement('button');
+        rejectButton.textContent = 'Reject';
+        rejectButton.onclick = () => rejectApprovedRequest(request.id);
+        
+        requestElement.appendChild(rejectButton);
     }
-    requests.forEach(request => {
-        const requestElement = createRequestElement(request, type);
-        container.appendChild(requestElement);
-    });
+
+    return requestElement;
 }
 
 async function clearMapData() {
@@ -232,7 +347,7 @@ async function clearMapData() {
                 refreshMap();
             }
         } catch (error) {
-            console.error('Error description:', error);
+            logger.error('Error description:', { error: error.message });
             showError(getErrorMessage(error));
         } finally {
             hideLoading();
@@ -240,118 +355,276 @@ async function clearMapData() {
     });
 }
 
-let currentPage = 1;
-let currentSearch = '';
-let currentLimit = 10;
-
-async function listUsers(page = currentPage, limit = currentLimit, search = currentSearch) {
+async function listUsers(page = 1, limit = 10, search = '') {
     showLoading();
     try {
         const users = await api.getUsers(page, limit, search);
-        console.log('API response:', users);
         const userListContainer = document.getElementById('user-list-container');
-        
-        if (!users || (Array.isArray(users) && users.length === 0) || (users.data && Array.isArray(users.data) && users.data.length === 0)) {
-            userListContainer.innerHTML = '<p>No users found.</p>';
-            return;
-        }
-        
-        const userData = Array.isArray(users) ? users : (users.data || []);
-        createUserTable(userData);
+        const userTable = document.getElementById('user-list');
+        const tbody = userTable.querySelector('tbody');
+        tbody.innerHTML = '';
 
-        // Update current values
-        currentPage = page;
-        currentSearch = search;
-        currentLimit = limit;
+        users.data.forEach(user => {
+            const row = createUserRow(user);
+            tbody.appendChild(row);
+        });
 
-        // Remove existing pagination controls
-        const existingPagination = userListContainer.querySelector('.pagination');
-        if (existingPagination) {
-            existingPagination.remove();
-        }
-
-        // Add pagination controls if pagination data is available
-        if (users.currentPage && users.totalPages) {
-            const paginationControls = createPaginationControls(users.currentPage, users.totalPages, (newPage) => listUsers(newPage, limit, search));
-            userListContainer.appendChild(paginationControls);
-        }
-
-        // Add event listeners to the newly created buttons
+        createPagination(users.currentPage, users.totalPages, page => listUsers(page, limit, search));
+        setupUserSearch(search);
         addUserActionListeners();
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error listing users:', { error: error.message });
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
     }
 }
 
-function createUserTable(users) {
-    const table = document.getElementById('user-list');
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = ''; // Clear existing rows
-    users.forEach(user => {
-        const row = createUserRow(user);
-        tbody.appendChild(row);
-    });
-}
-
 function createUserRow(user) {
+    logger.info('User in createUserRow:', { user });  // Add this line
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>${user.username}</td>
-        <td class="user-email">${user.email}</td>
-        <td class="user-admin">${user.is_admin ? 'Yes' : 'No'}</td>
+        <td>${user.email}</td>
+        <td>${user.role ? (ROLES[user.role] || user.role) : 'No role assigned'}</td>
         <td>
-            <div class="user-actions">
-                <button class="btn btn-secondary toggle-admin" data-userid="${user.id}" data-isadmin="${user.is_admin}" title="${user.is_admin ? 'Remove Admin' : 'Make Admin'}">
-                    ${user.is_admin ? '▼' : '▲'}
-                </button>
-                <button class="btn btn-danger delete-user" data-userid="${user.id}" title="Delete User">X</button>
-            </div>
+            <button class="btn btn-primary btn-sm manage-user" data-userid="${user.id}">Manage User</button>
+            <button class="btn btn-secondary btn-sm view-activity" data-userid="${user.id}">View Activity</button>
         </td>
     `;
     return row;
 }
 
-function createPaginationControls(currentPage, totalPages, onPageChange) {
-    const paginationDiv = document.createElement('div');
-    paginationDiv.className = 'pagination';
-    paginationDiv.innerHTML = `
-        <button ${currentPage === 1 ? 'disabled' : ''} onclick="onPageChange(${currentPage - 1})">Previous</button>
-        <span>Page ${currentPage} of ${totalPages}</span>
-        <button ${currentPage === totalPages ? 'disabled' : ''} onclick="onPageChange(${currentPage + 1})">Next</button>
+async function manageUser(userId) {
+    try {
+        const user = await api.getUserById(userId);
+        logger.info('Fetched user:', { user });
+
+        if (!user.role) {
+            logger.error('User role is undefined', { userId });
+            user.role = 'user';  // Set a default role
+        }
+
+        const modal = document.getElementById('manage-user-modal');
+        const form = document.getElementById('manage-user-form');
+        const userIdInput = document.getElementById('manage-user-id');
+        const usernameInput = document.getElementById('manage-user-username');
+        const emailInput = document.getElementById('manage-user-email');
+        const roleSelect = document.getElementById('manage-user-role');
+
+        userIdInput.value = user.id;
+        usernameInput.value = user.username;
+        emailInput.value = user.email;
+
+        // Populate role options
+        const roleOptions = Object.entries(ROLES).map(([key, value]) => {
+            const isSelected = user.role === value;
+            logger.info(`Option: ${key}, Value: ${value}, Selected: ${isSelected}`, { userId });
+            return `<option value="${value}" ${isSelected ? 'selected' : ''}>${key}</option>`;
+        }).join('');
+        roleSelect.innerHTML = roleOptions;
+
+        modal.style.display = 'block';
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const newRole = roleSelect.value;
+            await updateUser(userIdInput.value, usernameInput.value, emailInput.value, newRole);
+            modal.style.display = 'none';
+            await listUsers();
+        };
+
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        const deleteButton = document.getElementById('delete-user');
+        deleteButton.onclick = () => {
+            showConfirmationModal('Are you sure you want to delete this user?', async () => {
+                try {
+                    await api.deleteUser(userIdInput.value);
+                    showSuccess('User deleted successfully');
+                    modal.style.display = 'none';
+                    await listUsers();
+                } catch (error) {
+                    logger.error('Error deleting user:', { error: error.message });
+                    showError(getErrorMessage(error));
+                }
+            });
+        };
+    } catch (error) {
+        logger.error('Error fetching user details:', { error: error.message });
+        showError(getErrorMessage(error));
+    }
+}
+
+async function updateUser(userId, username, email, role) {
+    try {
+        await api.updateUser(userId, { username, email, role });
+        showSuccess('User updated successfully');
+    } catch (error) {
+        logger.error('Error updating user:', { error: error.message });
+        showError(getErrorMessage(error));
+    }
+}
+
+async function viewUserPermissions(userId) {
+    try {
+        const user = await api.getUser(userId);
+        const permissions = getUserPermissions(user);
+        
+        const modal = document.getElementById('user-permissions-modal');
+        const permissionsList = document.getElementById('user-permissions-list');
+        permissionsList.innerHTML = '';
+
+        permissions.forEach(permission => {
+            const listItem = document.createElement('li');
+            listItem.textContent = permission;
+            permissionsList.appendChild(listItem);
+        });
+
+        modal.style.display = 'block';
+
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    } catch (error) {
+        logger.error('Error fetching user permissions:', { error: error.message });
+        showError(getErrorMessage(error));
+    }
+}
+
+function createPagination(currentPage, totalPages, onPageChange) {
+    const paginationContainer = document.getElementById('user-pagination');
+    paginationContainer.innerHTML = '';
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.classList.add('btn', 'btn-secondary', 'pagination-btn');
+        if (i === currentPage) {
+            pageButton.classList.add('active');
+        }
+        pageButton.addEventListener('click', () => onPageChange(i));
+        paginationContainer.appendChild(pageButton);
+    }
+}
+
+function setupUserSearch(currentSearch) {
+    const searchContainer = document.getElementById('user-search-container');
+    searchContainer.innerHTML = `
+        <input type="text" id="user-search" placeholder="Search users..." value="${currentSearch}">
+        <button id="user-search-btn" class="btn btn-primary">Search</button>
     `;
-    return paginationDiv;
+
+    const searchInput = document.getElementById('user-search');
+    const searchButton = document.getElementById('user-search-btn');
+
+    searchButton.addEventListener('click', () => listUsers(1, 10, searchInput.value));
+    searchInput.addEventListener('keyup', event => {
+        if (event.key === 'Enter') {
+            listUsers(1, 10, searchInput.value);
+        }
+    });
 }
 
 function addUserActionListeners() {
-    document.querySelectorAll('.toggle-admin').forEach(button => {
-        button.addEventListener('click', () => toggleAdminStatus(button.dataset.userid));
+    document.querySelectorAll('.manage-user').forEach(button => {
+        button.addEventListener('click', () => manageUser(button.dataset.userid));
     });
+
+    document.querySelectorAll('.view-activity').forEach(button => {
+        button.addEventListener('click', () => viewUserActivity(button.dataset.userid));
+    });
+
+    document.querySelectorAll('.view-permissions').forEach(button => {
+        button.addEventListener('click', () => viewUserPermissions(button.dataset.userid));
+    });
+
     document.querySelectorAll('.delete-user').forEach(button => {
         button.addEventListener('click', () => deleteUser(button.dataset.userid));
     });
 }
 
-async function toggleAdminStatus(userId) {
+async function updateUserRole(userId, newRole) {
     try {
-        const response = await fetch(`/api/users/${userId}/toggle-admin`, {
-            method: 'POST',
+        const response = await fetch(`/api/users/${userId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update user role');
+        }
+
+        showSuccess('User role updated successfully');
+    } catch (error) {
+        logger.error('Error updating user role:', { error: error.message });
+        showError(getErrorMessage(error));
+    }
+}
+
+async function viewUserActivity(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/activity`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
+
         if (!response.ok) {
-            throw new Error('Failed to toggle admin status');
+            throw new Error('Failed to fetch user activity');
         }
-        const result = await response.json();
-        showSuccess(result.message);
-        await listUsers(currentPage, currentLimit, currentSearch);
+
+        const activity = await response.json();
+        displayUserActivity(activity);
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error fetching user activity:', { error: error.message });
         showError(getErrorMessage(error));
     }
+}
+
+function displayUserActivity(activities) {
+    const modal = document.getElementById('user-activity-modal');
+    const activityList = document.getElementById('user-activity-list');
+    activityList.innerHTML = '';
+
+    activities.forEach(activity => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `[${new Date(activity.timestamp).toLocaleString()}] ${activity.action}: ${activity.details}`;
+        activityList.appendChild(listItem);
+    });
+
+    modal.style.display = 'block';
+
+    const closeBtn = document.getElementsByClassName('close')[0];
+    closeBtn.onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
 }
 
 async function deleteUser(userId) {
@@ -362,7 +635,7 @@ async function deleteUser(userId) {
             showSuccess('User deleted successfully');
             await listUsers();
         } catch (error) {
-            console.error('Error description:', error);
+            logger.error('Error description:', { error: error.message });
             showError(getErrorMessage(error));
         } finally {
             hideLoading();
@@ -370,48 +643,46 @@ async function deleteUser(userId) {
     });
 }
 
-async function displayStatistics() {
-    showLoading();
+async function loadSystemLogs() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.VIEW_LOGS)) {
+        showError('You do not have permission to view system logs');
+        return;
+    }
     try {
-        const stats = await api.getStatistics();
-        const statsContainer = document.getElementById('statistics');
-        statsContainer.innerHTML = `
-            <p>Total Users: ${stats.totalUsers || 0}</p>
-            <p>Total Requests: ${stats.totalRequests || 0}</p>
-            <p>Pending Requests: ${stats.pendingRequests || 0}</p>
-            <p>Approved Requests: ${stats.approvedRequests || 0}</p>
-            <p>Rejected Requests: ${stats.rejectedRequests || 0}</p>
-        `;
+        const logs = await api.getSystemLogs();
+        const logContainer = document.getElementById('log-container');
+        logContainer.innerHTML = '';
+
+        logs.forEach(log => {
+            const logEntry = document.createElement('div');
+            logEntry.classList.add('log-entry', log.level.toLowerCase());
+            logEntry.textContent = `[${log.timestamp}] ${log.message}`;
+            logContainer.appendChild(logEntry);
+        });
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error loading system logs:', { error: error.message });
         showError(getErrorMessage(error));
-    } finally {
-        hideLoading();
     }
 }
 
-async function createUser(event) {
-    event.preventDefault();
-    showLoading();
+async function backupDatabase() {
     try {
-        const username = document.getElementById('new-username').value.trim();
-        const email = document.getElementById('new-email').value.trim();
-        const password = document.getElementById('new-password').value;
-        const isAdmin = document.getElementById('new-is-admin').checked;
-
-        if (!username || !email || !password) {
-            throw new Error('Username, email, and password are required.');
-        }
-
-        await api.createUser({ username, email, password, is_admin: isAdmin });
-        showSuccess('User created successfully');
-        document.getElementById('new-user-form').reset();
-        await listUsers();
+        await api.backupDatabase();
+        showSuccess('Database backup initiated successfully');
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error backing up database:', { error: error.message });
         showError(getErrorMessage(error));
-    } finally {
-        hideLoading();
+    }
+}
+
+async function refreshCache() {
+    try {
+        await api.refreshCache();
+        showSuccess('Cache refreshed successfully');
+    } catch (error) {
+        logger.error('Error refreshing cache:', { error: error.message });
+        showError(getErrorMessage(error));
     }
 }
 
@@ -425,7 +696,7 @@ async function approveRequest(requestId) {
             refreshMap();
         }
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
@@ -439,7 +710,7 @@ async function rejectRequest(requestId) {
         showSuccess('Request rejected successfully');
         await loadRequests('pending');
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', { error: error.message });
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
@@ -465,7 +736,7 @@ async function rejectApprovedRequest(requestId) {
                 refreshMap();
             }
         } catch (error) {
-            console.error('Error description:', error);
+            logger.error('Error description:', { error: error.message });
             showError(getErrorMessage(error));
         } finally {
             hideLoading();
@@ -473,41 +744,8 @@ async function rejectApprovedRequest(requestId) {
     });
 }
 
-function createRequestElement(request, type) {
-    const requestElement = document.createElement('div');
-    requestElement.className = 'request-item';
-    requestElement.innerHTML = `
-        <p>Type: ${request.type}</p>
-        <p>Label: ${request.label}</p>
-        <p>Coordinates: (${request.x}, ${request.y})</p>
-        <p>Status: ${request.status}</p>
-        <p>Submitted by: ${request.submitted_by}</p>
-    `;
-
-    if (type === 'pending') {
-        const approveButton = document.createElement('button');
-        approveButton.textContent = 'Approve';
-        approveButton.onclick = () => approveRequest(request.id);
-        
-        const rejectButton = document.createElement('button');
-        rejectButton.textContent = 'Reject';
-        rejectButton.onclick = () => rejectRequest(request.id);
-        
-        requestElement.appendChild(approveButton);
-        requestElement.appendChild(rejectButton);
-    } else if (type === 'history' && request.status === 'approved') {
-        const rejectButton = document.createElement('button');
-        rejectButton.textContent = 'Reject';
-        rejectButton.onclick = () => rejectApprovedRequest(request.id);
-        
-        requestElement.appendChild(rejectButton);
-    }
-
-    return requestElement;
-}
-
 // Expose functions to global scope for use in HTML
-window.toggleAdminStatus = toggleAdminStatus;
+window.updateUserRole = updateUserRole;
 window.deleteUser = deleteUser;
 window.approveRequest = approveRequest;
 window.rejectRequest = rejectRequest;
@@ -520,6 +758,7 @@ function showConfirmationModal(message, onConfirm) {
 
     messageElement.textContent = message;
     modal.style.display = 'block';
+    modal.style.zIndex = '2000'; // Increase z-index to appear on top
 
     confirmButton.onclick = () => {
         modal.style.display = 'none';
@@ -535,27 +774,9 @@ function showConfirmationModal(message, onConfirm) {
             modal.style.display = 'none';
         }
     };
-}
 
-function setupUserSearch() {
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.placeholder = 'Search users...';
-    searchInput.id = 'user-search';
-    
-    const searchButton = document.createElement('button');
-    searchButton.textContent = 'Search';
-    searchButton.onclick = () => listUsers(1, 10, searchInput.value);
-
-    const searchContainer = document.createElement('div');
-    searchContainer.appendChild(searchInput);
-    searchContainer.appendChild(searchButton);
-
-    const userList = document.getElementById('user-list');
-    userList.parentNode.insertBefore(searchContainer, userList);
-
-    // Add event listener for real-time search
-    searchInput.addEventListener('input', debounce(() => listUsers(1, 10, searchInput.value), 300));
+    // Move the modal to the end of the body to ensure it's on top
+    document.body.appendChild(modal);
 }
 
 // Add this debounce function at the top of your file
@@ -566,3 +787,4 @@ function debounce(func, delay) {
         timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
 }
+

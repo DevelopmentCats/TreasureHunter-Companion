@@ -11,11 +11,11 @@ const errorMessages = {
 };
 
 const errorGifs = [
-    'https://media.giphy.com/media/3o7TKr3nzbh5WgCFxe/giphy.gif',
-    'https://media.giphy.com/media/xT9IgIc0lryrxvqVGM/giphy.gif',
-    'https://media.giphy.com/media/l1J9EdzfOSgfyueLm/giphy.gif',
-    'https://media.giphy.com/media/3o7TKQ8kAP0f9X5PoY/giphy.gif',
-    'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif'
+    'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif', // Surprised cat
+    'https://media.giphy.com/media/VbnUQpnihPSIgIXuZv/giphy.gif', // Cat facepalm
+    'https://media.giphy.com/media/kGCuRgmbnO9EI/giphy.gif', // Keyboard cat
+    'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif', // Confused cat
+    'https://media.giphy.com/media/H4DjXQXamtTiIuCcRU/giphy.gif' // Coding cat
 ];
 
 function getRandomErrorGif() {
@@ -32,8 +32,8 @@ export function getErrorMessage(error) {
             case 403:
                 return errorMessages.FORBIDDEN;
             case 500:
-                return error.response.data.error === 'SERVER_ERROR' 
-                    ? `${errorMessages.SERVER_ERROR} Details: ${error.response.data.details}`
+                return error.response.data && error.response.data.error === 'SERVER_ERROR' 
+                    ? `${errorMessages.SERVER_ERROR} Details: ${error.response.data.details || 'No details available'}`
                     : errorMessages.SERVER_ERROR;
             default:
                 return errorMessages.DEFAULT;
@@ -52,8 +52,10 @@ export function showError(message, duration = 5000) {
     const errorElement = document.createElement('div');
     errorElement.className = 'error-message';
     errorElement.innerHTML = `
-        <img src="${getRandomErrorGif()}" alt="Error GIF" style="width: 100px; height: 100px; object-fit: cover;">
-        <p>${message}</p>
+        <div class="error-content">
+            <img src="${getRandomErrorGif()}" alt="Error Cat GIF" class="error-gif">
+            <p class="error-text">${escapeHtml(message)}</p>
+        </div>
     `;
     errorContainer.appendChild(errorElement);
 
@@ -61,6 +63,15 @@ export function showError(message, duration = 5000) {
         errorElement.classList.add('fade-out');
         setTimeout(() => errorElement.remove(), 500);
     }, duration);
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
 
 function createErrorContainer() {

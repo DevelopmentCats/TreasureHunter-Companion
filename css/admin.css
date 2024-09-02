@@ -1,0 +1,579 @@
+/* Admin Panel Styles */
+.admin-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    grid-auto-flow: dense;
+}
+
+.admin-card {
+    background-color: var(--current-line);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.admin-card h3 {
+    color: var(--purple);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--purple);
+    padding-bottom: 0.75rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background-color: var(--background);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--comment);
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.action-buttons button {
+    flex: 1;
+    min-width: 120px;
+}
+
+.scrollable-content {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-top: 1rem;
+}
+.user-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+}
+
+.user-table th,
+.user-table td {
+    padding: 1rem;
+    text-align: left;
+    background-color: var(--background);
+}
+
+.user-table th {
+    background-color: var(--selection);
+    color: var(--purple);
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.user-table tr {
+    transition: all 0.3s ease;
+}
+
+.user-table tr:hover {
+    transform: translateX(5px);
+    box-shadow: -5px 0 0 var(--purple);
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.tab-container {
+    display: flex;
+    margin-bottom: 1.5rem;
+    background-color: var(--background);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+.tab-button.active {
+    background-color: var(--purple);
+    color: var(--background);
+}
+
+#log-container {
+    font-family: monospace;
+    background-color: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.log-entry {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.log-entry:hover {
+    transform: translateX(5px);
+}
+
+.log-entry.info {
+    background-color: rgba(80, 250, 123, 0.1);
+    border-left: 3px solid var(--green);
+}
+
+.log-entry.warning {
+    background-color: rgba(255, 184, 108, 0.1);
+    border-left: 3px solid var(--orange);
+}
+
+.log-entry.error {
+    background-color: rgba(255, 85, 85, 0.1);
+    border-left: 3px solid var(--red);
+}
+
+#user-management {
+    display: flex;
+    flex-direction: column;
+    grid-column: span 2;
+}
+
+#user-search-container {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+#user-search {
+    flex-grow: 1;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+}
+
+#user-search-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.user-table th,
+.user-table td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--comment);
+}
+
+.user-table th {
+    background-color: var(--selection);
+    color: var(--purple);
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.user-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.user-actions button {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.role-select {
+    width: 100%;
+    padding: 0.25rem;
+    font-size: 0.85rem;
+}
+
+#user-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.pagination-btn {
+    margin: 0 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.confirmation-modal {
+    z-index: 2000;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--background);
+    padding: 2rem;
+    border: 2px solid var(--purple);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--purple);
+    padding-bottom: 1rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--purple);
+    font-size: 1.8rem;
+}
+
+.close {
+    font-size: 2rem;
+    color: var(--comment);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: var(--foreground);
+}
+
+#manage-user-form {
+    display: grid;
+    gap: 1.5rem;
+}
+
+#manage-user-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--cyan);
+    font-weight: bold;
+}
+
+#manage-user-form input,
+#manage-user-form select {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--current-line);
+    border: 1px solid var(--comment);
+    border-radius: 6px;
+    color: var(--foreground);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+#manage-user-form input:focus,
+#manage-user-form select:focus {
+    border-color: var(--purple);
+    outline: none;
+}
+
+#manage-user-form button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#manage-user-form button[type="submit"] {
+    background-color: var(--green);
+    color: var(--background);
+}
+
+#manage-user-form button[type="submit"]:hover {
+    background-color: var(--cyan);
+}
+
+#delete-user {
+    background-color: var(--red);
+    color: var(--background);
+}
+
+#delete-user:hover {
+    background-color: var(--orange);
+}
+
+#manage-user-role {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--comment);
+    border-radius: 4px;
+}
+
+#manage-user-role option {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+#manage-user-role option:checked {
+    background-color: var(--selection);
+    color: var(--purple);
+}
+
+#user-activity-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#user-activity-list li {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--comment);
+}
+
+#user-activity-list li:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .admin-dashboard {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .admin-card {
+        width: 100%;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+    }
+
+    .admin-card h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .stat-item {
+        padding: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    .scrollable-content {
+        max-height: 300px;
+    }
+
+    #user-management {
+        grid-column: span 1;
+    }
+
+    #user-search-container {
+        flex-direction: column;
+    }
+
+    #user-search,
+    #user-search-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .user-table {
+        font-size: 0.8rem;
+    }
+
+    .user-table th,
+    .user-table td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .user-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .user-actions button {
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 0.25rem;
+    }
+
+    #user-pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination-btn {
+        margin: 0.25rem;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .tab-container {
+        flex-direction: column;
+    }
+
+    .tab-button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .user-table th,
+    .user-table td {
+        padding: 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .user-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .user-actions button {
+        width: 100%;
+    }
+
+    .modal-content {
+        padding: 1rem;
+    }
+
+    #manage-user-form input,
+    #manage-user-form select,
+    #manage-user-form button {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    #user-search-container {
+        flex-direction: column;
+    }
+
+    #user-search,
+    #user-search-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .pagination-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .admin-dashboard {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

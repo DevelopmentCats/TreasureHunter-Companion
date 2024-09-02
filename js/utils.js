@@ -1,3 +1,5 @@
+import logger from './logger.js';
+
 export function showLoading() {
     const loadingAnimation = document.querySelector('.loading-animation');
     if (loadingAnimation) {
@@ -6,9 +8,13 @@ export function showLoading() {
 }
 
 export function hideLoading() {
-    const loadingAnimation = document.querySelector('.loading-animation');
-    if (loadingAnimation) {
-        loadingAnimation.style.display = 'none';
+    logger.info('Attempting to hide loading spinner');
+    const loadingElement = document.querySelector('.loading-animation');
+    if (loadingElement) {
+        logger.info('Loading element found, hiding it');
+        loadingElement.style.display = 'none';
+    } else {
+        logger.warn('Loading element not found');
     }
 }
 
@@ -76,8 +82,31 @@ export async function hashPassword(password) {
         .join('');
 }
 
+export async function createProfileLink(username) {
+    const link = document.createElement('a');
+    link.href = `/profile.html?username=${encodeURIComponent(username)}`;
+    link.textContent = username;
+    link.classList.add('profile-link', 'profile-username-link');
+    return link;
+}
+
+export async function compressImage(file, maxWidth, quality) {
+    const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: maxWidth,
+        useWebWorker: true,
+        initialQuality: quality
+    };
+    try {
+        return await imageCompression(file, options);
+    } catch (error) {
+        logger.error('Error compressing image:', error);
+        throw error;
+    }
+}
+
 export function setupMobileNavigation() {
-    const menuToggle = document.querySelector('.menu-toggle');
+    const menuToggle = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('nav');
 
     if (menuToggle && nav) {
@@ -93,8 +122,24 @@ export function setupMobileNavigation() {
     const navLinks = document.querySelectorAll('nav a');
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
-            nav.classList.remove('active');
-            menuToggle.setAttribute('aria-expanded', 'false');
+            if (nav) {
+                nav.classList.remove('active');
+            }
+            if (menuToggle) {
+                menuToggle.setAttribute('aria-expanded', 'false');
+            }
         });
     });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!menuToggle.contains(event.target) && !nav.contains(event.target) && nav.classList.contains('active')) {
+            nav.classList.remove('active');
+            menuToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
+
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.showError = showError;

@@ -1,5 +1,6 @@
-import { showLoading, hideLoading, showError } from './utils.js';
+import { showLoading, hideLoading, showError, createProfileLink } from './utils.js';
 import { getErrorMessage } from './errorHandler.js';
+import logger from './logger.js';
 
 const canvas = document.getElementById('map');
 const ctx = canvas.getContext('2d');
@@ -24,13 +25,55 @@ const initialPanY = 0;
 // Add these variables at the top of the file
 let showGrid = true;
 
+// Add this new variable for the tooltip
+let tooltip;
+
+function createTooltip() {
+    tooltip = document.createElement('div');
+    tooltip.id = 'map-tooltip';
+    tooltip.style.position = 'absolute';
+    tooltip.style.display = 'none';
+    tooltip.style.backgroundColor = 'rgba(68, 71, 90, 0.8)';
+    tooltip.style.color = 'var(--foreground)';
+    tooltip.style.padding = '8px 12px';
+    tooltip.style.borderRadius = '6px';
+    tooltip.style.fontSize = '14px';
+    tooltip.style.boxShadow = '0 2px 10px rgba(189, 147, 249, 0.2)';
+    tooltip.style.zIndex = '1000';
+    tooltip.style.pointerEvents = 'none';
+    document.body.appendChild(tooltip);
+}
+
+function updateTooltip(x, y, clientX, clientY) {
+    tooltip.textContent = `X: ${x}, Y: ${y}`;
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const offsetX = 10;
+    const offsetY = 10;
+    
+    let left = clientX + offsetX;
+    let top = clientY + offsetY;
+
+    // Adjust position if tooltip goes off-screen
+    if (left + tooltipRect.width > window.innerWidth) {
+        left = clientX - offsetX - tooltipRect.width;
+    }
+    if (top + tooltipRect.height > window.innerHeight) {
+        top = clientY - offsetY - tooltipRect.height;
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
 function getAuthHeader() {
     const token = localStorage.getItem('token');
     return { 'Authorization': `Bearer ${token}` };
 }
 
-async function loadMapData() {
-    showLoading();
+async function loadMapData(showLoadingFlag = true) {
+    if (showLoadingFlag && typeof window.showLoading === 'function') {
+        window.showLoading();
+    }
     try {
         const response = await fetch('/api/map-data');
         if (!response.ok) {
@@ -39,11 +82,15 @@ async function loadMapData() {
         const mapData = await response.json();
         return mapData;
     } catch (error) {
-        console.error('Error loading map data:', error);
-        showError(getErrorMessage(error));
+        logger.error('Error loading map data:', error);
+        if (typeof window.showError === 'function') {
+            window.showError(getErrorMessage(error));
+        }
         return [];
     } finally {
-        hideLoading();
+        if (showLoadingFlag && typeof window.hideLoading === 'function') {
+            window.hideLoading();
+        }
     }
 }
 
@@ -89,25 +136,7 @@ function drawMap(mapData) {
 
     // Draw grid
     if (showGrid) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1 / zoomLevel;
-        const gridSize = canvas.width / zoomLevel;
-        const offsetX = (panX % 50) / zoomLevel;
-        const offsetY = (panY % 50) / zoomLevel;
-        
-        for (let x = -offsetX; x <= gridSize; x += 50) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, gridSize);
-            ctx.stroke();
-        }
-        
-        for (let y = -offsetY; y <= gridSize; y += 50) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(gridSize, y);
-            ctx.stroke();
-        }
+        drawGrid();
     }
 
     // Draw map elements
@@ -116,79 +145,124 @@ function drawMap(mapData) {
         const x = Math.floor((element.x + mapBoundary) / tileSize) * tileSize;
         const y = Math.floor((mapBoundary - element.y) / tileSize) * tileSize;
 
-        // Draw the tile background for all elements
-        ctx.fillStyle = getColorForType(element.type);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(x + 2, y + 2, tileSize - 4, tileSize - 4, 8);
-        ctx.fill();
-        ctx.stroke();
+        // Draw the tile background for regular elements
+        if (element.type !== 'clanBase' && element.type !== 'campfire') {
+            drawTile(x, y, tileSize, element.type);
+        }
 
         // Draw special elements (campfire and clanBase)
         if (element.type === 'clanBase') {
-            const clanBaseSize = tileSize * 0.6;
-            ctx.beginPath();
-            ctx.arc(x + tileSize / 2, y + tileSize / 2, clanBaseSize / 2, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(142, 68, 173, 0.4)'; // Purple, more transparent
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(142, 68, 173, 0.8)'; // Semi-transparent purple outline
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            drawClanBase(element.x, element.y);
         } else if (element.type === 'campfire') {
-            const campfireSize = tileSize * 0.5;
-            ctx.beginPath();
-            ctx.moveTo(x + tileSize / 2, y + tileSize / 2 - campfireSize / 2);
-            ctx.lineTo(x + tileSize / 2 - campfireSize / 2, y + tileSize / 2 + campfireSize / 2);
-            ctx.lineTo(x + tileSize / 2 + campfireSize / 2, y + tileSize / 2 + campfireSize / 2);
-            ctx.closePath();
-            ctx.fillStyle = 'rgba(211, 84, 0, 0.4)'; // Orange, more transparent
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(211, 84, 0, 0.8)'; // Semi-transparent orange outline
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            drawCampfire(element.x, element.y);
         }
 
-        // Add label
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Get the map label
-        const mapLabel = getMapLabel(element.type);
-        
-        // Draw the label
-        ctx.fillText(mapLabel, x + tileSize / 2, y + tileSize / 2);
+        // Add label for regular elements
+        if (element.type !== 'clanBase' && element.type !== 'campfire') {
+            drawLabel(x, y, tileSize, element.type);
+        }
     });
 
     // Draw colored squares
-    drawColoredSquare(150, 150, 600, 'rgba(255, 0, 0, 0.1)', 'rgba(255, 0, 0, 0.3)');
-    drawColoredSquare(300, 300, 300, 'rgba(0, 255, 0, 0.1)', 'rgba(0, 255, 0, 0.3)');
+    drawColoredSquare(150, 150, 600, 'rgba(255, 0, 0, 0.1)', 'rgba(255, 0, 0, 0.5)');
+    drawColoredSquare(300, 300, 300, 'rgba(0, 255, 0, 0.1)', 'rgba(0, 255, 0, 0.5)');
 
     ctx.restore();
+}
+
+function drawGrid() {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1 / zoomLevel;
+    const gridSize = canvas.width / zoomLevel;
+    const offsetX = (panX % 50) / zoomLevel;
+    const offsetY = (panY % 50) / zoomLevel;
+    
+    for (let x = -offsetX; x <= gridSize; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, gridSize);
+        ctx.stroke();
+    }
+    
+    for (let y = -offsetY; y <= gridSize; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(gridSize, y);
+        ctx.stroke();
+    }
+}
+
+function drawTile(x, y, tileSize, type) {
+    ctx.fillStyle = getColorForType(type);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x + 2, y + 2, tileSize - 4, tileSize - 4, 8);
+    ctx.fill();
+    ctx.stroke();
+}
+
+function drawClanBase(x, y) {
+    const tileSize = 50;
+    const clanBaseSize = tileSize * 0.35; // Slightly larger than before
+    const adjustedX = x + mapBoundary;
+    const adjustedY = mapBoundary - y;
+    
+    ctx.beginPath();
+    ctx.rect(adjustedX - clanBaseSize / 2, adjustedY - clanBaseSize / 2, clanBaseSize, clanBaseSize);
+    ctx.fillStyle = 'rgba(142, 68, 173, 0.4)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(142, 68, 173, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawCampfire(x, y) {
+    const tileSize = 50;
+    const campfireSize = tileSize * 0.25;
+    const adjustedX = x + mapBoundary;
+    const adjustedY = mapBoundary - y;
+    
+    ctx.beginPath();
+    ctx.arc(adjustedX, adjustedY, campfireSize / 2, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(211, 84, 0, 0.4)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(211, 84, 0, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawLabel(x, y, tileSize, type) {
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const mapLabel = getMapLabel(type);
+    ctx.fillText(mapLabel, x + tileSize / 2, y + tileSize / 2);
 }
 
 function drawColoredSquare(x, y, size, fillColor, strokeColor) {
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4; // Increased from 2 to 4
     ctx.beginPath();
     ctx.roundRect(x, y, size, size, 8);
     ctx.fill();
     ctx.stroke();
 }
 
-async function initMap() {
+export async function initMap() {
     const mapData = await loadMapData();
     drawMap(mapData);
+
+    createTooltip();
 
     // Add event listeners for zoom and pan
     canvas.addEventListener('wheel', handleZoom);
     canvas.addEventListener('mousedown', startPan);
-    canvas.addEventListener('mousemove', pan);
+    canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mouseup', endPan);
-    canvas.addEventListener('mouseleave', endPan);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
 
     // Add event listener for reset button
     const resetButton = document.getElementById('reset-map-btn');
@@ -199,9 +273,35 @@ async function initMap() {
     document.getElementById('zoom-out').addEventListener('click', () => handleZoomButton(0.9));
     document.getElementById('toggle-grid').addEventListener('click', toggleGrid);
 
-    // Add event listener for coordinate display
-    const coordsDisplay = document.getElementById('coordinates-display');
-    canvas.addEventListener('mousemove', (event) => {
+    // Add event listener for submit map update button
+    const openUpdateRequestModalButton = document.getElementById('open-update-request-modal');
+    const updateRequestModal = document.getElementById('update-request-modal');
+    const closeModalButton = updateRequestModal.querySelector('.close');
+    const xInput = document.getElementById('x');
+    const yInput = document.getElementById('y');
+
+    openUpdateRequestModalButton.addEventListener('click', () => {
+        updateRequestModal.classList.add('active');
+        xInput.value = '';
+        yInput.value = '';
+        xInput.readOnly = false;
+        yInput.readOnly = false;
+    });
+
+    closeModalButton.addEventListener('click', () => {
+        updateRequestModal.classList.remove('active');
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === updateRequestModal) {
+            updateRequestModal.classList.remove('active');
+        }
+    });
+
+    // Add event listener for click on canvas
+    canvas.addEventListener('click', handleMapClick);
+
+    function handleMapClick(event) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -212,18 +312,27 @@ async function initMap() {
         const x = Math.round((canvasX - panX - canvas.width / 2) / zoomLevel);
         const y = Math.round((canvas.height / 2 - (canvasY - panY)) / zoomLevel);
         
-        coordsDisplay.textContent = `X: ${x}, Y: ${y}`;
-    });
+        if (isEmptyTile(x, y)) {
+            openUpdateRequestModal(x, y);
+        }
+    }
 
-    // Position the coordinates display
-    coordsDisplay.style.position = 'absolute';
-    coordsDisplay.style.bottom = '10px';
-    coordsDisplay.style.right = '10px';
-    coordsDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    coordsDisplay.style.color = 'white';
-    coordsDisplay.style.padding = '5px 10px';
-    coordsDisplay.style.borderRadius = '4px';
-    coordsDisplay.style.fontSize = '14px';
+    function isEmptyTile(x, y) {
+        return Math.abs(x) % 50 !== 0 && Math.abs(y) % 50 !== 0;
+    }
+
+    function openUpdateRequestModal(x, y) {
+        const updateRequestModal = document.getElementById('update-request-modal');
+        const xInput = document.getElementById('x');
+        const yInput = document.getElementById('y');
+        
+        xInput.value = x;
+        yInput.value = y;
+        xInput.readOnly = true;
+        yInput.readOnly = true;
+        
+        updateRequestModal.classList.add('active');
+    }
 }
 
 function handleZoom(event) {
@@ -246,7 +355,7 @@ function toggleGrid() {
 }
 
 export function refreshMap() {
-    loadMapData().then(mapData => drawMap(mapData));
+    loadMapData(false).then(mapData => drawMap(mapData));
 }
 
 function resetMap() {
@@ -268,58 +377,75 @@ async function fetchLeaderboard() {
             throw new Error('Failed to fetch leaderboard data');
         }
         const leaderboardData = await response.json();
-        console.log('Fetched leaderboard data:', leaderboardData);
+        logger.info('Fetched leaderboard data:', leaderboardData);
         return leaderboardData;
     } catch (error) {
-        console.error('Error fetching leaderboard data:', error);
-        showError(getErrorMessage(error));
+        logger.error('Error fetching leaderboard data:', error);
+        if (typeof window.showError === 'function') {
+            window.showError(getErrorMessage(error));
+        }
         return [];
     }
 }
 
-function updateLeaderboard(leaderboardData) {
-    console.log('Updating leaderboard with data:', leaderboardData);
+async function updateLeaderboard(leaderboardData) {
+    logger.info('Updating leaderboard with data:', leaderboardData);
     const leaderboardList = document.getElementById('leaderboard-list');
     leaderboardList.innerHTML = '';
     if (!leaderboardData || leaderboardData.length === 0) {
         leaderboardList.innerHTML = '<li class="no-data">No data available</li>';
         return;
     }
-    leaderboardData.forEach((entry, index) => {
+    for (const [index, entry] of leaderboardData.entries()) {
         const listItem = document.createElement('li');
         listItem.className = 'leaderboard-item';
+        const profileLink = await createProfileLink(entry.username);
         listItem.innerHTML = `
             <span class="rank">${index + 1}</span>
-            <span class="username">${entry.username}</span>
+            <span class="username"></span>
             <span class="submissions">${entry.approved_submissions}</span>
         `;
+        listItem.querySelector('.username').appendChild(profileLink);
         leaderboardList.appendChild(listItem);
-    });
+    }
 }
 
-// Modify the setupRealTimeUpdates function to include leaderboard updates
-function setupRealTimeUpdates() {
-    const eventSource = new EventSource('/api/map-updates');
+let eventSource;
+
+export function setupRealTimeUpdates() {
+    eventSource = new EventSource('/api/map-updates');
     eventSource.onmessage = async (event) => {
         const update = JSON.parse(event.data);
         if (update.type === 'mapUpdate') {
             await refreshMap();
             const leaderboardData = await fetchLeaderboard();
-            updateLeaderboard(leaderboardData);
+            await updateLeaderboard(leaderboardData);
         }
     };
     eventSource.onerror = (error) => {
-        console.error('EventSource failed:', error);
-        showError(getErrorMessage(error));
+        logger.error('EventSource failed:', error);
+        if (typeof window.showError === 'function') {
+            window.showError(getErrorMessage(error));
+        }
         eventSource.close();
     };
 }
 
+export function cleanupRealTimeUpdates() {
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
+}
 window.addEventListener('load', async () => {
     initMap();
     setupRealTimeUpdates();
     const leaderboardData = await fetchLeaderboard();
-    updateLeaderboard(leaderboardData);
+    await updateLeaderboard(leaderboardData);
+});
+
+window.addEventListener('unload', () => {
+    cleanupRealTimeUpdates();
 });
 
 // Add panning functionality
@@ -343,21 +469,26 @@ function endPan() {
     isPanning = false;
 }
 
-// Add this to the end of the file
-const modal = document.getElementById('update-request-modal');
-const openModalBtn = document.getElementById('open-update-form');
-const closeModalBtn = document.getElementsByClassName('close')[0];
-
-openModalBtn.onclick = function() {
-    modal.style.display = 'block';
-}
-
-closeModalBtn.onclick = function() {
-    modal.style.display = 'none';
-}
-
-window.onclick = function(event) {
-    if (event.target == modal) {
-        modal.style.display = 'none';
+function handleMouseMove(event) {
+    if (isPanning) {
+        pan(event);
     }
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+    
+    const x = Math.round((canvasX - panX - canvas.width / 2) / zoomLevel);
+    const y = Math.round((canvas.height / 2 - (canvasY - panY)) / zoomLevel);
+    
+    tooltip.style.display = 'block';
+    updateTooltip(x, y, event.clientX, event.clientY);
+}
+
+function handleMouseLeave() {
+    tooltip.style.display = 'none';
+    endPan();
 }

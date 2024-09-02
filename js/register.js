@@ -1,5 +1,7 @@
 import { showError, showSuccess, showLoading, hideLoading } from './utils.js';
 import { register } from './auth.js';
+import logger from './logger.js';
+import { getErrorMessage } from './errorHandler.js';
 
 const registerForm = document.getElementById('register-form');
 
@@ -29,8 +31,8 @@ registerForm.addEventListener('submit', async (e) => {
             throw new Error('Registration failed');
         }
     } catch (error) {
-        console.error('Registration error:', error);
-        showError('An error occurred during registration. Please try again.');
+        logger.error('Registration error:', error);
+        showError(getErrorMessage(error));
     } finally {
         hideLoading();
     }

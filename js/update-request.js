@@ -1,4 +1,5 @@
 import { showLoading, hideLoading, showError, showSuccess } from './utils.js';
+import logger from './logger.js';
 
 const form = document.getElementById('update-request-form');
 const typeSelect = document.getElementById('type');
@@ -31,6 +32,11 @@ typeSelect.addEventListener('change', () => {
     labelInput.readOnly = true;
 });
 
+// Add these lines at the beginning of the file
+const xInput = document.getElementById('x');
+const yInput = document.getElementById('y');
+
+// Modify the form event listener
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -42,8 +48,8 @@ form.addEventListener('submit', async (e) => {
 
     const formData = new FormData(form);
     const type = formData.get('type');
-    const x = parseInt(formData.get('x'));
-    const y = parseInt(formData.get('y'));
+    const x = parseInt(xInput.value);
+    const y = parseInt(yInput.value);
 
     if (isNaN(x) || isNaN(y)) {
         showError('Invalid coordinates. Please enter numbers for X and Y.');
@@ -69,7 +75,7 @@ form.addEventListener('submit', async (e) => {
         y
     };
 
-    console.log('Submitting update request:', updateRequest);
+    logger.info('Submitting update request:', updateRequest);
 
     try {
         showLoading();
@@ -88,7 +94,7 @@ form.addEventListener('submit', async (e) => {
         }
 
         const result = await response.json();
-        console.log('Update request submitted successfully:', result);
+        logger.info('Update request submitted successfully:', result);
         showSuccess('Update request submitted successfully');
         form.reset();
 
@@ -96,12 +102,23 @@ form.addEventListener('submit', async (e) => {
             refreshMap();
         }
     } catch (error) {
-        console.error('Error submitting update request:', error);
+        logger.error('Error submitting update request:', error);
         showError(`Failed to submit update request: ${error.message}`);
     } finally {
         hideLoading();
     }
 });
+
+// Add this function to reset the form when the modal is closed
+function resetUpdateRequestForm() {
+    form.reset();
+    xInput.disabled = false;
+    yInput.disabled = false;
+}
+
+// Add an event listener to reset the form when the modal is closed
+const closeModalButton = document.querySelector('#update-request-modal .close');
+closeModalButton.addEventListener('click', resetUpdateRequestForm);
 
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');

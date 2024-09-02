@@ -1,0 +1,517 @@
+/* Profile Styles */
+.profile-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+}
+
+.profile-main h2 {
+    font-size: 2.5rem;
+    color: var(--purple);
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-container {
+    display: flex;
+    background-color: var(--current-line);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    min-height: 600px;
+    width: 1000px; /* Set a fixed width */
+    max-width: 100%; /* Ensure it doesn't exceed the screen width on smaller devices */
+    margin: 0 auto; /* Center the container */
+}
+
+.profile-sidebar {
+    width: 250px;
+    background-color: var(--background);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.profile-username-link {
+    color: var(--purple);
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.profile-username-link:hover {
+    color: var(--pink);
+    text-shadow: 0 0 8px rgba(255, 121, 198, 0.5);
+}
+
+.avatar-container {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.avatar-square {
+    width: 100%;
+    height: 100%;
+    background-color: var(--purple);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+#profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.avatar-square:hover #profile-avatar {
+    transform: scale(1.1);
+}
+
+#change-avatar-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: var(--purple);
+    color: var(--background);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+#change-avatar-btn:hover {
+    background-color: var(--pink);
+    transform: translateY(-2px);
+}
+
+.profile-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.profile-nav a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--foreground);
+    text-decoration: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 8px;
+    width: 100%;
+    text-align: left;
+}
+
+.profile-nav a.active,
+.profile-nav a:hover {
+    background-color: var(--purple);
+    color: var(--background);
+}
+
+.profile-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    min-height: 600px;
+    width: 750px; /* Fixed width: 1000px (container) - 250px (sidebar) */
+}
+
+.profile-section {
+    display: none;
+}
+
+.profile-section.active {
+    display: block;
+}
+
+.profile-section {
+    width: 100%;
+}
+
+.profile-section > * {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#edit-profile-btn,
+#friend-request-btn {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+#edit-profile-btn:hover,
+#friend-request-btn:hover {
+    transform: translateY(-2px);
+}
+
+#friend-request-btn {
+    display: none;
+}
+
+.profile-details h3 {
+    color: var(--cyan);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--purple);
+    padding-bottom: 0.5rem;
+}
+
+.profile-details p {
+    margin-bottom: 0.5rem;
+    color: var(--foreground);
+    font-size: 1.1rem;
+}
+
+.profile-details strong {
+    color: var(--pink);
+    font-weight: bold;
+}
+
+.profile-achievements,
+.profile-recent-activity {
+    background-color: var(--background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.profile-achievements h3,
+.profile-recent-activity h3 {
+    color: var(--purple);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--comment);
+    padding-bottom: 0.5rem;
+}
+
+#achievements-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.achievement {
+    background-color: var(--current-line);
+    border-radius: 8px;
+    padding: 0.5rem;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.achievement:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.achievement img {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 0.5rem;
+}
+
+.achievement h4 {
+    color: var(--cyan);
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.achievement p {
+    color: var(--foreground);
+    font-size: 0.8rem;
+}
+
+.activity-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--comment);
+    transition: background-color 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background-color: var(--selection);
+}
+
+.activity-icon {
+    font-size: 1rem;
+    margin-right: 0.75rem;
+    color: var(--cyan);
+}
+
+.activity-content {
+    flex-grow: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-description {
+    margin: 0;
+    color: var(--foreground);
+}
+
+.activity-date {
+    font-size: 0.8rem;
+    color: var(--comment);
+}
+
+/* Edit Profile Modal Styles */
+#edit-profile-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#edit-profile-modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+}
+
+.edit-profile-modal-content {
+    background-color: var(--background);
+    padding: 2rem;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    transition: all 0.3s ease;
+}
+
+#edit-profile-modal.active .edit-profile-modal-content {
+    transform: scale(1);
+}
+
+.edit-profile-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.edit-profile-modal-header h2 {
+    color: var(--purple);
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+.edit-profile-close {
+    font-size: 1.5rem;
+    color: var(--comment);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.edit-profile-close:hover {
+    color: var(--foreground);
+}
+
+#edit-profile-form {
+    width: 100%;
+}
+
+#edit-profile-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#edit-profile-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--cyan);
+    font-weight: bold;
+}
+
+#edit-profile-form input[type="text"],
+#edit-profile-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--comment);
+    border-radius: 8px;
+    background-color: var(--current-line);
+    color: var(--foreground);
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+#edit-profile-form input[type="text"]:focus,
+#edit-profile-form textarea:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.2);
+    outline: none;
+}
+
+#edit-profile-form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+#edit-profile-form button {
+    background-color: var(--purple);
+    color: var(--background);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+#edit-profile-form button:hover {
+    background-color: var(--pink);
+    transform: translateY(-2px);
+}
+
+/* Friends List Styles */
+#friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.friend-item {
+    background-color: var(--background);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.friend-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.friend-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 1rem;
+}
+
+.friend-info {
+    flex-grow: 1;
+}
+
+.friend-username {
+    color: var(--purple);
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.friend-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.remove-friend-btn,
+.view-profile-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.remove-friend-btn {
+    background-color: var(--red);
+    color: var(--background);
+}
+
+.remove-friend-btn:hover {
+    background-color: var(--pink);
+}
+
+.view-profile-btn {
+    background-color: var(--cyan);
+    color: var(--background);
+}
+
+.view-profile-btn:hover {
+    background-color: var(--green);
+}
+
+.remove-friend-btn:hover,
+.view-profile-btn:hover {
+    transform: translateY(-2px);
+}
+
+#friend-requests-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--purple);
+    color: var(--background);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+#friend-requests-btn:hover {
+    background-color: var(--pink);
+    transform: translateY(-2px);
+}
+
+#friends {
+    position: relative;
+    padding-top: 3rem; /* Add space for the friend requests button */
+}

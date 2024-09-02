@@ -1,0 +1,163 @@
+/* Login page styles */
+.auth-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 60px - 100px);
+    background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(rgba(40, 42, 54, 0.8), rgba(40, 42, 54, 0.8)),
+        url('../images/treasure-map-bg.jpg');
+    background-size: 20px 20px, cover, cover;
+    background-position: center;
+    padding: 2rem 0;
+    box-sizing: border-box;
+}
+
+main.auth-main {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    min-height: auto;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.auth-container {
+    background-color: var(--current-line);
+    border-radius: 8px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-container h2 {
+    color: var(--pink);
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 2.2rem;
+    text-shadow: 0 0 10px rgba(255, 121, 198, 0.5);
+}
+
+.auth-form .form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.auth-form label {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.75rem;
+    color: var(--comment);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    padding: 0 0.25rem;
+    background-color: var(--background);
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 0.75rem 0.75rem;
+    border: 1px solid var(--comment);
+    border-radius: 4px;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+.auth-form input:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.2);
+    outline: none;
+}
+
+.auth-form input:focus + label,
+.auth-form input:not(:placeholder-shown) + label {
+    top: -1.25rem;
+    left: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--purple);
+    background-color: var(--background);
+    padding: 0 0.25rem;
+    z-index: 1;
+    border-top: 1px solid var(--purple);
+    border-left: 1px solid var(--purple);
+    border-right: 1px solid var(--purple);
+    border-radius: 4px 4px 0 0;
+}
+
+.auth-form button {
+    width: 50%;
+    padding: 0.75rem;
+    background-color: var(--purple);
+    color: var(--background);
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    margin-top: 1rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.auth-form button:hover {
+    background-color: var(--pink);
+    transform: translateY(-2px);
+}
+
+.auth-links {
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--foreground);
+}
+
+.auth-links a {
+    color: var(--cyan);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+    color: var(--pink);
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .auth-main {
+        min-height: calc(100vh - 60px - 80px);
+        padding: 1rem 0;
+    }
+
+    .auth-container {
+        max-width: 90%;
+        padding: 1.5rem;
+    }
+
+    .auth-container h2 {
+        font-size: 1.8rem;
+    }
+
+    .auth-form input,
+    .auth-form button {
+        font-size: 0.9rem;
+    }
+}

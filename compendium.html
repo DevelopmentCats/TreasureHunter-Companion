@@ -4,50 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Compendium - Treasurehunter Companion</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/compendium.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.tiny.cloud/1/tr3f0pf1110moufp7ep1mrhzb9mrnw1gyz64bo8jyrg3ztgr/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
     <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
     <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <h1>Treasurehunter Companion</h1>
-            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
             <nav id="main-nav">
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="map.html">Map</a></li>
                     <li><a href="compendium.html">Compendium</a></li>
-                    <li><a href="#">Wiki</a></li>
-                    <li><a href="#">Inventory</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
                     <li><a href="#">Market</a></li>
                 </ul>
             </nav>
-            <div id="user-panel-toggle">
-                <span id="user-panel-username"></span>
-                <button id="user-panel-button">▼</button>
+            <div class="user-panel">
+                <div class="notification-container">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
+                <button class="user-panel-toggle">
+                    <img id="user-panel-avatar" src="/images/default-avatar.jpg" alt="User Avatar">
+                    <span id="user-panel-username"></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    <a href="#" id="logout-link">Logout</a>
+                </div>
             </div>
         </div>
-        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
     <main class="compendium-main">
         <h2 class="compendium-title">Treasurehunter Compendium</h2>
         <div class="compendium-controls">
-            <div class="search-container">
+            <div class="search-filter-container">
                 <input type="text" id="search-input" class="compendium-search" placeholder="Search entries...">
+                <select id="category-filter" class="compendium-filter">
+                    <option value="">All Categories</option>
+                    <!-- Populate these options dynamically from your categories table -->
+                    <option value="35">Test</option>
+                    <option value="40">Test3</option>
+                    <option value="41">Test8</option>
+                    <option value="42">NPC</option>
+                    <option value="43">Test18</option>
+                    <option value="44">42</option>
+                    <option value="45">Category</option>
+                </select>
                 <button id="search-button" class="compendium-btn compendium-btn-submit">
                     Search
                 </button>
             </div>
-            <select id="category-filter" class="compendium-filter">
-                <option value="">All Categories</option>
-                <option value="item">Item</option>
-                <option value="creature">Creature</option>
-                <option value="location">Location</option>
-                <option value="mechanic">Game Mechanic</option>
-            </select>
             <button id="open-submission-form" class="compendium-btn compendium-btn-submit">Submit Entry</button>
         </div>
         <div id="compendium-container" class="compendium-container">
@@ -167,7 +189,6 @@
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button type="button" id="edit-clear-form-btn" class="btn btn-secondary">Clear Form</button>
                     <button type="button" id="edit-preview-btn" class="btn btn-secondary">Preview</button>
                     <button type="submit" class="btn btn-primary">Update Entry</button>
                 </div>
@@ -183,26 +204,55 @@
     </div>
     <div id="compendium-entry-modal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
             <div id="compendium-entry-content"></div>
         </div>
     </div>
     <footer>
-        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
     </footer>
     <div class="loading-animation">
         <div class="spinner"></div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
     <script type="module">
         import { setupMobileNavigation } from './js/utils.js';
-        import './js/auth.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
+        import { isLoggedIn, checkAuth } from './js/auth.js';
         import './js/userPanel.js';
         import './js/compendium.js';
+        import { loadNotifications } from './js/notifications.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function init() {
+            await initializeBrowserLogger();
             setupMobileNavigation();
+            logger.info('Compendium page loaded');
+
+            if (isLoggedIn()) {
+                loadNotifications();
+            }
+
+            checkAuth();
             // Any other compendium-specific initialization can go here
-        });
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
     </script>
 </body>
 </html>

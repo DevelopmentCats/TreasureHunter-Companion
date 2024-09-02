@@ -4,100 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Treasurehunter Companion</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <h1>Treasurehunter Companion</h1>
-            <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">☰</button>
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
             <nav id="main-nav">
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="map.html">Map</a></li>
                     <li><a href="compendium.html">Compendium</a></li>
-                    <li><a href="#">Wiki</a></li>
-                    <li><a href="#">Inventory</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
                     <li><a href="#">Market</a></li>
                 </ul>
             </nav>
-            <div id="user-panel-toggle">
-                <span id="user-panel-username"></span>
-                <button id="user-panel-button">▼</button>
+            <div class="user-panel">
+                <div class="notification-container">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
+                <button class="user-panel-toggle">
+                    <img id="user-panel-avatar" src="/images/default-avatar.jpg" alt="User Avatar">
+                    <span id="user-panel-username"></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    <a href="#" id="logout-link">Logout</a>
+                </div>
             </div>
         </div>
-        <div id="user-panel" class="user-panel-collapsed"></div>
     </header>
     <main>
-        <h2>Admin Panel</h2>
+        <h2>Admin Dashboard</h2>
         <div class="admin-dashboard">
-            <section id="map-requests" class="admin-card">
-                <h3>Map Change Requests</h3>
-                <div id="tabs" class="tab-container">
-                    <button id="pending-tab" class="tab-button active">Pending Requests</button>
-                    <button id="history-tab" class="tab-button">Request History</button>
+            <section id="quick-stats" class="admin-card">
+                <h3>Quick Statistics</h3>
+                <div id="statistics" class="stats-grid"></div>
+            </section>
+            <section id="quick-actions" class="admin-card">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <button id="clear-map-btn" class="btn btn-danger">Clear Map Data</button>
+                    <button id="backup-db-btn" class="btn btn-primary">Backup Database</button>
+                    <button id="refresh-cache-btn" class="btn btn-secondary">Refresh Cache</button>
                 </div>
-                <div id="requests-container" class="scrollable-content"></div>
             </section>
             <section id="user-management" class="admin-card">
                 <h3>User Management</h3>
-                <div id="create-user-form">
-                    <h4>Create New User</h4>
-                    <form id="new-user-form">
-                        <div class="form-group">
-                            <input type="text" id="new-username" placeholder="Username" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="email" id="new-email" placeholder="Email" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="password" id="new-password" placeholder="Password" required>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="new-is-admin">
-                                Admin User
-                            </label>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Create User</button>
-                    </form>
-                </div>
                 <div id="user-search-container"></div>
-                <div id="user-list-container">
+                <div class="scrollable-content">
                     <table id="user-list" class="user-table">
                         <thead>
                             <tr>
                                 <th>Username</th>
-                                <th class="user-email">Email</th>
-                                <th class="user-admin">Admin</th>
+                                <th>Email</th>
+                                <th>Role</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="user-pagination"></div>
             </section>
-            <section id="site-statistics" class="admin-card">
-                <h3>Site Statistics</h3>
-                <div id="statistics"></div>
+            <section id="pending-entries" class="admin-card">
+                <h3>Pending Compendium Entries</h3>
+                <div id="pending-entries-list" class="scrollable-content"></div>
             </section>
-            <section id="map-management" class="admin-card">
-                <h3>Map Management</h3>
-                <button id="clear-map-btn" class="btn btn-danger">Clear Map Data</button>
-            </section>
-            <section id="compendium-management" class="admin-card">
-                <h3>Compendium Management</h3>
-                <div id="pending-entries" class="scrollable-content">
-                    <h4>Pending Entries</h4>
-                    <div id="pending-entries-list"></div>
+            <section id="map-requests" class="admin-card">
+                <h3>Map Update Requests</h3>
+                <div id="tabs" class="tab-container">
+                    <button id="pending-tab" class="tab-button active">Pending Requests</button>
+                    <button id="history-tab" class="tab-button">Request History</button>
                 </div>
+                <div id="requests-container" class="scrollable-content"></div>
+            </section>
+            <section id="system-logs" class="admin-card">
+                <h3>System Logs</h3>
+                <div id="log-container" class="scrollable-content"></div>
             </section>
         </div>
     </main>
     <footer>
-        <p>&copy; 2023 Treasurehunter Companion. All rights reserved.</p>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
     </footer>
-    <div id="confirmation-modal" class="modal">
+    <div id="confirmation-modal" class="modal confirmation-modal">
         <div class="modal-content">
             <h3>Confirm Action</h3>
             <p id="confirmation-message"></p>
@@ -110,16 +129,64 @@
     <div class="loading-animation">
         <div class="spinner"></div>
     </div>
+    <div id="user-activity-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>User Activity</h2>
+            <ul id="user-activity-list"></ul>
+        </div>
+    </div>
+    <div id="manage-user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage User</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="manage-user-form">
+                <input type="hidden" id="manage-user-id">
+                <div>
+                    <label for="manage-user-username">Username</label>
+                    <input type="text" id="manage-user-username" required>
+                </div>
+                <div>
+                    <label for="manage-user-email">Email</label>
+                    <input type="email" id="manage-user-email" required>
+                </div>
+                <div>
+                    <label for="manage-user-role">Role</label>
+                    <select id="manage-user-role"></select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" id="delete-user" class="btn btn-danger">Delete User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
     <script type="module">
         import { setupMobileNavigation } from './js/utils.js';
-        import './js/auth.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
+        import { isLoggedIn, checkAuth } from './js/auth.js';
         import './js/userPanel.js';
         import './js/admin.js';
+        import { loadNotifications } from './js/notifications.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function init() {
+            await initializeBrowserLogger();
             setupMobileNavigation();
+            logger.info('Admin page loaded');
+
+            if (isLoggedIn()) {
+                loadNotifications();
+            }
+
+            checkAuth();
             // Any other admin-specific initialization can go here
-        });
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
     </script>
 </body>
 </html>

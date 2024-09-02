@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Treasurehunter Companion</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div class="user-panel">
+                <div class="notification-container">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
+                <button class="user-panel-toggle">
+                    <img id="user-panel-avatar" src="/images/default-avatar.jpg" alt="User Avatar">
+                    <span id="user-panel-username"></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    <a href="#" id="logout-link">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="settings-main">
+        <h2>User Settings</h2>
+        <div class="settings-container">
+            <form id="settings-form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password:</label>
+                    <input type="password" id="new-password" name="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password:</label>
+                    <input type="password" id="confirm-password" name="confirm-password">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
+        import { isLoggedIn, checkAuth } from './js/auth.js';
+        import './js/userPanel.js';
+        import './js/settings.js';
+        import { loadNotifications } from './js/notifications.js';
+
+        async function init() {
+            await initializeBrowserLogger();
+            setupMobileNavigation();
+            logger.info('Settings page loaded');
+
+            if (isLoggedIn()) {
+                loadNotifications();
+            } else {
+                window.location.href = 'login.html';
+            }
+
+            checkAuth();
+            // Any other settings-specific initialization can go here
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
+    </script>
+</body>
+</html>

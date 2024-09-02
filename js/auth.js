@@ -1,4 +1,6 @@
 import { showError } from './utils.js';
+import logger from './logger.js';
+import { ROLES, PERMISSIONS, hasPermission } from './roles.js';
 
 export function checkAuth() {
     let token = localStorage.getItem('token');
@@ -10,7 +12,7 @@ export function checkAuth() {
     if (token && user) {
         if (loginLink) loginLink.style.display = 'none';
         if (logoutLink) logoutLink.style.display = 'inline';
-        if (isAdmin(user)) {
+        if (hasPermission(user, PERMISSIONS.MANAGE_USERS)) {
             if (adminLink) adminLink.style.display = 'inline';
         } else {
             if (adminLink) adminLink.style.display = 'none';
@@ -22,17 +24,15 @@ export function checkAuth() {
     }
 }
 
-export function isAdmin() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    return user && user.is_admin === true;
-}
-
 export function isLoggedIn() {
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    console.log('Token in localStorage:', token);
+    return !!token;
 }
 
 export function getCurrentUserId() {
     const user = JSON.parse(localStorage.getItem('user'));
+    console.log('Current user from localStorage:', user);
     return user ? user.id : null;
 }
 
@@ -46,13 +46,18 @@ export function logout() {
 }
 
 export function setUserData(userData, token) {
+    console.log('Setting user data:', userData);
+    console.log('Setting token:', token);
     const user = {
         id: userData.id,
         username: userData.username,
-        is_admin: userData.isAdmin === 1
+        role: userData.role,
+        last_login: userData.last_login,
+        contribution_points: userData.contribution_points
     };
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
+    console.log('User data and token set in localStorage');
     checkAuth();
 }
 
@@ -74,7 +79,7 @@ export async function refreshUserSession() {
                 throw new Error('Session refresh failed');
             }
         } catch (error) {
-            console.error('Error refreshing session:', error);
+            logger.error('Error refreshing session:', error);
             logout();
             return false;
         }
@@ -102,7 +107,7 @@ export async function login(username, password) {
             return false;
         }
     } catch (error) {
-        console.error('Error during login:', error);
+        logger.error('Error during login:', error);
         showError('An error occurred during login');
         return false;
     }
@@ -123,10 +128,11 @@ export async function register(username, email, password) {
         if (response.ok) {
             return true;
         } else {
+            logger.error('Registration failed:', data);
             throw new Error(data.error || 'Registration failed');
         }
     } catch (error) {
-        console.error('Error during registration:', error);
+        logger.error('Error during registration:', error);
         throw error;
     }
 }
@@ -136,7 +142,5 @@ checkAuth();
 
 // Make functions available globally
 window.logout = logout;
-window.isAdmin = isAdmin;
 window.login = login;
 window.register = register;
-

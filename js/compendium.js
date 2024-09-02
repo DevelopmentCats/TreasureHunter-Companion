@@ -1,18 +1,37 @@
-import { showLoading, hideLoading, showError, showSuccess } from './utils.js';
-import { isAdmin, getCurrentUserId, isLoggedIn } from './auth.js';
+import { showLoading, hideLoading, showError, showSuccess, compressImage, createProfileLink } from './utils.js';
+import { isLoggedIn, getCurrentUserId } from './auth.js';
 import { getErrorMessage } from './errorHandler.js';
+import logger from './logger.js';
+import { hasPermission, PERMISSIONS } from './roles.js';
 
+// Global variables
+let formInitialized = false;
+let isUpdating = false;
+let dropZoneInitialized = false;
+let setupComplete = false;
+let currentPage = 1;
+let totalPages = 1;
 let allEntries = [];
+let msnry = null;
+let selectedImage = null;
+
+export { msnry, setupComplete, currentPage, totalPages, allEntries };
 
 const ENTRIES_PER_PAGE = 10;
-let currentPage = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCompendiumEntries();
-    setupEventListeners();
-    loadCategories();
-    setupSubmissionModal();
-    initializeForm();
+    logger.info('DOM fully loaded and parsed');
+    loadCompendiumEntries().then(() => {
+        logger.info('Compendium entries loaded');
+        setupEventListeners();
+        loadCategories();
+        setupSubmissionModal();
+        initializeForm();
+        setupEntryListeners();
+    }).catch(error => {
+        logger.error('Error loading compendium entries:', error);
+        showError(getErrorMessage(error));
+    });
 });
 
 function setupEventListeners() {
@@ -42,13 +61,15 @@ function setupEventListeners() {
     document.getElementById('compendium-list').addEventListener('click', (event) => {
         const viewButton = event.target.closest('.btn-details');
         if (viewButton) {
-            const entryId = viewButton.dataset.id;
+            const entryId = viewButton.closest('.compendium-entry').dataset.id;
             showEntryDetails(entryId);
         }
     });
+}
 
+function setupEntryModal() {
     const entryModal = document.getElementById('compendium-entry-modal');
-    const closeBtn = entryModal.querySelector('.close');
+    const closeBtn = entryModal.querySelector('.compendium-close');
 
     closeBtn.addEventListener('click', () => {
         entryModal.classList.remove('active');
@@ -70,13 +91,15 @@ async function setupSubmissionModal() {
     form.innerHTML = `
         <div class="form-group">
             <label for="entry-name">Name:</label>
-            <input type="text" id="entry-name" name="name" required>
+            <input type="text" id="entry-name" name="name" required placeholder="Enter entry name">
         </div>
         <div class="form-group">
             <label for="entry-category">Category:</label>
             <select id="entry-category" name="category" required>
                 <option value="">Select a category</option>
+                <option value="new">Add new category</option>
             </select>
+            <input type="text" id="new-category-input" name="newCategory" placeholder="Enter new category name" style="display: none;">
         </div>
         <div class="form-group">
             <label for="tag-input">Tags:</label>
@@ -109,61 +132,155 @@ async function setupSubmissionModal() {
         </div>
     `;
 
+    function closeSubmitModal() {
+        modal.classList.remove('active');
+        resetForm();
+    }
+
+    closeBtn.addEventListener('click', closeSubmitModal);
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeSubmitModal();
+        }
+    });
+
     openBtn.addEventListener('click', async () => {
-        console.log('Open submission form button clicked');
+        logger.info('Open submission form button clicked');
         if (!isLoggedIn()) {
             showError(getErrorMessage({ response: { status: 401 } }));
             return;
         }
         
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!hasPermission(user, PERMISSIONS.NEW_COMPENDIUM)) {
+            showError('You do not have permission to submit entries');
+            return;
+        }
+        
         modal.classList.add('active');
-        console.log('Modal activated');
+        logger.info('Modal activated');
         
         try {
             await loadCategories(true);
-            console.log('Categories loaded');
+            logger.info('Categories loaded');
 
-            if (!tinymce.get('tinymce-editor')) {
-                await initializeTinyMCE('#tinymce-editor');
-                console.log('TinyMCE initialized');
-            } else {
-                tinymce.get('tinymce-editor').setContent('');
-                console.log('TinyMCE already initialized, content cleared');
+            let editor = tinymce.get('tinymce-editor');
+            if (!editor) {
+                editor = await initializeTinyMCE('#tinymce-editor');
+                logger.info('TinyMCE initialized');
+            }
+            
+            if (!formInitialized) {
+                initializeForm();
+                formInitialized = true;
+            }
+            
+            // Wait for TinyMCE to be fully initialized before resetting the form
+            await new Promise(resolve => setTimeout(resolve, 100));
+            resetForm();
+            
+            // Call setupImagePreview only if it hasn't been initialized
+            if (!window.imagePreviewInitialized) {
+                setupImagePreview();
+                window.imagePreviewInitialized = true;
             }
         } catch (error) {
-            console.error('Error setting up submission modal:', error);
+            logger.error('Error setting up submission modal:', error);
             showError(getErrorMessage(error));
-        }
-    });
-
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
-        if (tinymce.get('tinymce-editor')) {
-            tinymce.remove('#tinymce-editor');
-        }
-    });
-
-    window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.classList.remove('active');
-            if (tinymce.get('tinymce-editor')) {
-                tinymce.remove('#tinymce-editor');
-            }
         }
     });
 
     form.removeEventListener('submit', handleFormSubmit);
     form.addEventListener('submit', handleFormSubmit);
+
+    const categorySelect = document.getElementById('entry-category');
+    const newCategoryInput = document.getElementById('new-category-input');
+
+    categorySelect.addEventListener('change', (e) => {
+        if (e.target.value === 'new') {
+            newCategoryInput.style.display = 'block';
+            newCategoryInput.required = true;
+        } else {
+            newCategoryInput.style.display = 'none';
+            newCategoryInput.required = false;
+        }
+    });
+
+    const tagInput = document.getElementById('tag-input');
+    const tagContainer = document.querySelector('.tag-container');
+
+    tagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const tag = tagInput.value.trim();
+            if (tag) {
+                addTag(tag);
+                tagInput.value = '';
+            }
+        }
+    });
+
+    function addTag(tag) {
+        const tagElement = document.createElement('span');
+        tagElement.classList.add('tag');
+        tagElement.innerHTML = `
+            <span class="tag-text">${tag}</span>
+            <span class="tag-close">&times;</span>
+        `;
+        tagContainer.appendChild(tagElement);
+
+        tagElement.querySelector('.tag-close').addEventListener('click', () => {
+            tagContainer.removeChild(tagElement);
+        });
+    }
+
+    const imageDropZone = document.getElementById('image-drop-zone');
+    const imageInput = document.getElementById('entry-image');
+    const imagePreview = document.getElementById('image-preview');
+
+    imageDropZone.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        imageInput.click();
+    });
+
+    imageDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        imageDropZone.classList.add('dragover');
+    });
+
+    imageDropZone.addEventListener('dragleave', () => {
+        imageDropZone.classList.remove('dragover');
+    });
+
+    imageDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imageDropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleImageUpload(e.dataTransfer.files[0]);
+        }
+    });
+
+    imageInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleImageUpload(e.target.files[0]);
+        }
+    });
+
+    setupCustomFields();
+
+    setupPreviewButton();
 }
 
 async function handleFormSubmit(event) {
     event.preventDefault();
-    console.log('Form submission started');
+    logger.info('Form submission started');
 
-    // Disable the submit button to prevent multiple submissions
-    const submitButton = event.target.querySelector('button[type="submit"]');
-    if (submitButton) {
-        submitButton.disabled = true;
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.NEW_COMPENDIUM)) {
+        showError('You do not have permission to submit entries');
+        return;
     }
 
     try {
@@ -173,13 +290,13 @@ async function handleFormSubmit(event) {
         const editor = tinymce.get('tinymce-editor');
         if (editor) {
             const description = editor.getContent();
-            console.log('TinyMCE content:', description); // Add this line for debugging
+            logger.info('TinyMCE content:', description);
             if (!description.trim()) {
                 throw new Error('Description is required');
             }
             formData.set('description', description);
         } else {
-            console.error('TinyMCE editor not found');
+            logger.error('TinyMCE editor not found');
             throw new Error('TinyMCE editor not initialized');
         }
 
@@ -201,12 +318,20 @@ async function handleFormSubmit(event) {
         const categorySelect = document.getElementById('entry-category');
         const newCategoryInput = document.getElementById('new-category-input');
         if (categorySelect.value === 'new') {
-            formData.set('category', 'new');
-            formData.set('newCategory', newCategoryInput.value.trim());
+            formData.set('category', newCategoryInput.value.trim());
         } else {
-            formData.set('category', categorySelect.value);
+            formData.set('category', categorySelect.options[categorySelect.selectedIndex].text);
         }
 
+        // Ensure the image is included in the form data
+        if (selectedImage) {
+            formData.set('image', selectedImage, selectedImage.name);
+            logger.info('Image file added to form data:', selectedImage.name);
+        } else {
+            logger.info('No image file selected');
+        }
+
+        showLoading();
         const response = await fetch('/api/compendium', {
             method: 'POST',
             body: formData,
@@ -215,131 +340,180 @@ async function handleFormSubmit(event) {
             }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to submit entry');
-        }
-
         const result = await response.json();
-        console.log('Submission result:', result);
-        showSuccess('Entry submitted successfully');
-        form.reset();
-        document.getElementById('compendium-submission-modal').classList.remove('active');
-        loadCompendiumEntries();
 
-        console.log('Form submitted successfully');
-    } catch (error) {
-        console.error('Error submitting form:', error);
-        showError(getErrorMessage(error));
-    } finally {
-        // Re-enable the submit button
-        if (submitButton) {
-            submitButton.disabled = false;
-        }
-    }
-}
-
-async function loadCompendiumEntries(page = 1) {
-    showLoading();
-    try {
-        const categoriesResponse = await fetch('/api/categories');
-        if (!categoriesResponse.ok) {
-            throw new Error(`Failed to fetch categories: ${categoriesResponse.status} ${categoriesResponse.statusText}`);
-        }
-        const categories = await categoriesResponse.json();
-        const categoryMap = Object.fromEntries(categories.map(cat => [cat.id, cat.name]));
-
-        const response = await fetch(`/api/compendium?status=approved&page=${page}&limit=${ENTRIES_PER_PAGE}`);
         if (!response.ok) {
-            throw new Error(`Failed to fetch compendium entries: ${response.status} ${response.statusText}`);
+            throw new Error(result.error || 'Failed to submit entry');
         }
-        const data = await response.json();
-        allEntries = data.entries.map(entry => ({
-            ...entry,
-            category: parseInt(entry.category),
-            categoryName: categoryMap[entry.category] || 'Unknown'
-        }));
-        currentPage = data.currentPage;
-        
-        displayCompendiumEntries(allEntries);
-        updatePaginationControls(data.totalPages);
 
-        // Reinitialize Masonry
-        const compendiumList = document.getElementById('compendium-list');
-        const msnry = new Masonry(compendiumList, {
-            itemSelector: '.grid-item',
-            columnWidth: '.grid-item',
-            percentPosition: true,
-            gutter: 20
-        });
-
-        imagesLoaded(compendiumList).on('progress', () => {
-            msnry.layout();
-        });
-
+        logger.info('Server response:', result);
+        showSuccess('Entry submitted successfully');
+        resetForm();
+        closeSubmissionModal();
     } catch (error) {
-        console.error('Error loading compendium entries:', error);
+        logger.error('Error submitting entry:', error);
         showError(getErrorMessage(error));
-        document.getElementById('compendium-list').innerHTML = '<p class="error-message">Failed to load entries. Please try again later.</p>';
     } finally {
         hideLoading();
     }
 }
 
-function performSearch() {
-    const searchTerm = document.getElementById('search-input').value.toLowerCase();
-    const categoryFilter = document.getElementById('category-filter').value;
-
-    const filteredEntries = allEntries.filter(entry => {
-        const matchesSearch = entry.name.toLowerCase().includes(searchTerm) ||
-                              entry.description.toLowerCase().includes(searchTerm) ||
-                              (Array.isArray(entry.tags) && entry.tags.some(tag => tag.toLowerCase().includes(searchTerm))) ||
-                              (entry.custom_fields && Object.values(entry.custom_fields).some(value => String(value).toLowerCase().includes(searchTerm)));
-        const matchesCategory = categoryFilter === '' || entry.category === parseInt(categoryFilter);
-        return matchesSearch && matchesCategory;
-    });
-
-    displayCompendiumEntries(filteredEntries);
+function closeSubmissionModal() {
+    const modal = document.getElementById('compendium-submission-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    resetForm();
 }
 
-function displayCompendiumEntries(entries) {
+async function loadCompendiumEntries(page = 1) {
+    try {
+        showLoading();
+        logger.info('Fetching compendium entries for page:', page);
+        const response = await fetch(`/api/compendium?page=${page}`);
+        const data = await response.json();
+        logger.info('Received compendium entries:', data);
+
+        if (response.ok) {
+            currentPage = data.currentPage || 1;
+            totalPages = data.totalPages || 1;
+            allEntries = data.entries || [];
+            logger.info('Processed entries:', allEntries);
+
+            displayCompendiumEntries(allEntries);
+            setupEntryListeners();
+            updatePaginationControls();
+
+            if (!setupComplete) {
+                logger.info('Setting up search...');
+                setupSearch();
+                logger.info('Setting up category filter...');
+                setupCategoryFilter();
+                logger.info('Setting up submission modal...');
+                setupSubmissionModal();
+                setupCompendiumObserver();
+                setupComplete = true;
+            }
+        } else {
+            logger.error('Error loading compendium entries:', data);
+            showError(getErrorMessage(data));
+        }
+    } catch (error) {
+        logger.error('Error loading compendium entries:', error);
+        showError(getErrorMessage(error));
+        document.getElementById('compendium-list').innerHTML = '<p class="error-message">Failed to load entries. Please try again later.</p>';
+    } finally {
+        hideLoading();
+        logger.info('Compendium entries loaded');
+    }
+}
+
+function setupSearch() {
+    logger.info('Setting up search functionality');
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
+
+    if (!searchInput || !searchButton) {
+        logger.error('Search elements not found');
+        return;
+    }
+
+    searchButton.addEventListener('click', performSearch);
+    searchInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            performSearch();
+        }
+    });
+}
+
+async function performSearch() {
+    logger.info('Performing search');
+    const searchTerm = document.getElementById('search-input').value.trim();
+    const categoryFilter = document.getElementById('category-filter');
+    const categoryId = categoryFilter.value;
+    
+    try {
+        showLoading();
+        const response = await fetch(`/api/compendium/search?q=${encodeURIComponent(searchTerm)}&category=${encodeURIComponent(categoryId)}`);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Search failed: ${response.status} ${response.statusText}. ${errorData.error || ''}`);
+        }
+        const data = await response.json();
+        displayCompendiumEntries(data.entries);
+        updatePaginationControls(data.currentPage, data.totalPages);
+    } catch (error) {
+        logger.error('Error performing search:', { error: error.message, searchTerm, categoryId });
+        showError(getErrorMessage(error));
+        displayCompendiumEntries([]); // Display empty results
+    } finally {
+        hideLoading();
+    }
+}
+
+function setupCategoryFilter() {
+    logger.info('Setting up category filter');
+    const categoryFilter = document.getElementById('category-filter');
+    if (!categoryFilter) {
+        logger.error('Category filter element not found');
+        return;
+    }
+
+    // Populate category filter options
+    loadCategories(false, 'category-filter');
+
+    // Add event listener for category filter
+    categoryFilter.addEventListener('change', performSearch);
+}
+
+async function displayCompendiumEntries(entries) {
+    logger.info('Displaying compendium entries:', entries);
     const compendiumList = document.getElementById('compendium-list');
     compendiumList.innerHTML = '';
 
-    entries.forEach(entry => {
-        const entryElement = document.createElement('div');
-        entryElement.className = 'compendium-entry grid-item';
-        entryElement.innerHTML = `
-            <div class="entry-image">
-                ${entry.image_path 
-                    ? `<img src="${entry.image_path}" alt="${entry.name}" class="lazy" data-src="${entry.image_path}">`
-                    : '<div class="no-image">No image available</div>'}
-            </div>
-            <div class="entry-content">
-                <h3>${entry.name}</h3>
-                <p class="entry-description">${truncateText(entry.description, 100)}</p>
-                <button class="btn-details" data-id="${entry.id}">View Details</button>
-            </div>
-        `;
+    if (entries.length === 0) {
+        logger.info('IMPORTANT: No entries found in compendium search');
+        compendiumList.innerHTML = '<p>No entries found. The compendium is feeling shy today.</p>';
+        return;
+    }
+
+    for (const entry of entries) {
+        if (!entry.id) {
+            logger.error('Entry is missing ID:', entry);
+            continue;
+        }
+        const entryElement = await createEntryElement(entry);
         compendiumList.appendChild(entryElement);
+        logger.info('Added entry to compendium list:', entry.name);
+    }
+
+    logger.info('Finished adding entries to DOM. Time to make these buttons work!');
+    setupEntryListeners();
+
+    // Initialize or reinitialize Masonry
+    initializeMasonry();
+
+    // Update submitter usernames
+    await updateSubmitterUsernames();
+}
+
+function setupCompendiumObserver() {
+    const compendiumList = document.getElementById('compendium-list');
+    if (!compendiumList) return;
+
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                logger.info('Compendium list changed:', mutation);
+                document.querySelectorAll('.compendium-entry').forEach(entry => {
+                    entry.style.opacity = '1';
+                    entry.style.visibility = 'visible';
+                });
+            }
+        });
     });
 
-    setupLazyLoading();
-    setupDetailButtons();
-    handleResponsiveLayout();
-
-    // Initialize Masonry
-    const msnry = new Masonry(compendiumList, {
-        itemSelector: '.grid-item',
-        columnWidth: '.grid-item',
-        percentPosition: true,
-        gutter: 20
-    });
-
-    // Layout Masonry after each image loads
-    imagesLoaded(compendiumList).on('progress', () => {
-        msnry.layout();
-    });
+    observer.observe(compendiumList, { childList: true, subtree: true });
 }
 
 function setupLazyLoading() {
@@ -358,24 +532,59 @@ function setupLazyLoading() {
     lazyImages.forEach(img => imageObserver.observe(img));
 }
 
-function setupDetailButtons() {
-    const detailButtons = document.querySelectorAll('.btn-details');
-    detailButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            const entryId = e.target.getAttribute('data-id');
-            showEntryDetails(entryId);
-        });
-    });
+
+function setupEntryListeners() {
+    logger.info('Setting up entry listeners');
+    const compendiumList = document.getElementById('compendium-list');
+    
+    // Remove existing listener to prevent duplicates
+    compendiumList.removeEventListener('click', handleCompendiumClick);
+    
+    // Add the listener to the parent element
+    compendiumList.addEventListener('click', handleCompendiumClick);
+
+    // Add vote button listeners
+    compendiumList.addEventListener('click', handleVoteClick);
+
+    logger.info('Compendium list click listener set up');
 }
 
-function updatePaginationControls(totalPages) {
+function handleCompendiumClick(event) {
+    if (isUpdating) return; // Prevent multiple clicks during update
+
+    const viewButton = event.target.closest('.btn-details');
+    if (viewButton) {
+        const entryId = viewButton.dataset.id;
+        logger.info('View button clicked, entry ID:', entryId);
+        if (entryId) {
+            isUpdating = true;
+            logger.info('Calling showEntryDetails with ID:', entryId);
+            showEntryDetails(entryId).finally(() => {
+                isUpdating = false;
+            });
+        } else {
+            logger.error('Entry ID is undefined. Button:', viewButton);
+        }
+    }
+}
+
+function handleVoteClick(event) {
+    const voteButton = event.target.closest('.btn-vote');
+    if (voteButton) {
+        const entryId = voteButton.closest('.compendium-entry').dataset.id;
+        const voteValue = voteButton.classList.contains('upvote') ? 1 : -1;
+        vote(entryId, voteValue);
+    }
+}
+
+function updatePaginationControls() {
     const pageInfo = document.getElementById('page-info');
     const prevPageButton = document.getElementById('prev-page');
     const nextPageButton = document.getElementById('next-page');
 
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevPageButton.disabled = currentPage === 1;
-    nextPageButton.disabled = currentPage === totalPages;
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    if (prevPageButton) prevPageButton.disabled = currentPage === 1;
+    if (nextPageButton) nextPageButton.disabled = currentPage === totalPages;
 }
 
 function changePage(direction) {
@@ -383,48 +592,164 @@ function changePage(direction) {
     loadCompendiumEntries(newPage);
 }
 
-function createEntryElement(entry) {
+async function createEntryElement(entry) {
+    logger.info('Creating entry element for:', entry);
     const entryElement = document.createElement('div');
     entryElement.className = 'compendium-entry';
     entryElement.dataset.id = entry.id;
+    
+    const submitterSpan = document.createElement('span');
+    submitterSpan.className = 'entry-submitter';
+    submitterSpan.textContent = 'Loading...';
+    submitterSpan.dataset.userId = entry.submitted_by;
+
     entryElement.innerHTML = `
         <div class="entry-image">
-            ${entry.image_path ? `<img src="${entry.image_path}" alt="${entry.name}" class="entry-thumbnail">` : '<div class="no-image">No image available</div>'}
+            ${entry.image_path 
+                ? `<img src="${entry.image_path}" alt="${entry.name}" class="lazy" data-src="${entry.image_path}">`
+                : '<div class="no-image">No image available</div>'}
         </div>
         <div class="entry-content">
-            <h3>${entry.name || 'Unnamed Entry'}</h3>
-            <p class="entry-description">${truncateText(entry.description || 'No description available', 100)}</p>
+            <h3 class="entry-title" title="${entry.name}">${entry.name || 'Unnamed Entry'}</h3>
+            <div class="entry-category">${entry.category_name || 'Uncategorized'}</div>
+            <p class="entry-description">${truncateText(entry.description, 80)}</p>
+            <div class="voting-system">
+                <button class="btn-vote upvote" data-id="${entry.id}">
+                    <svg class="vote-icon" viewBox="0 0 24 24">
+                        <path d="M12 4L2 14h4v6h12v-6h4L12 4z"/>
+                    </svg>
+                </button>
+                <span class="vote-count">${entry.votes || 0}</span>
+                <button class="btn-vote downvote" data-id="${entry.id}">
+                    <svg class="vote-icon" viewBox="0 0 24 24">
+                        <path d="M12 20l10-10h-4V4H6v6H2l10 10z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="entry-meta">
+                Submitted by: ${submitterSpan.outerHTML}
+            </div>
         </div>
-        <button class="btn-details">View Details</button>
+        <button class="btn-details" data-id="${entry.id}">View Details</button>
     `;
-
-    addVotingSystem(entryElement, entry);
-    entryElement.querySelector('.btn-details').addEventListener('click', () => showEntryDetails(entry.id));
 
     return entryElement;
 }
 
-function truncateText(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substr(0, maxLength) + '...';
+async function updateSubmitterUsernames() {
+    const submitterElements = document.querySelectorAll('.entry-submitter');
+    for (const element of submitterElements) {
+        const userId = element.dataset.userId;
+        try {
+            const username = await fetchSubmitterUsername(userId);
+            const profileLink = await createProfileLink(username);
+            element.innerHTML = '';
+            element.appendChild(profileLink);
+        } catch (error) {
+            logger.error('Error fetching submitter username:', error);
+            element.textContent = 'Unknown User';
+        }
+    }
 }
 
-function addVotingSystem(entryElement, entry) {
-    const votingSystem = document.createElement('div');
-    votingSystem.className = 'voting-system';
-    votingSystem.innerHTML = `
-        <button class="btn-vote upvote" data-id="${entry.id}">▲</button>
-        <span class="vote-count">${entry.votes || 0}</span>
-        <button class="btn-vote downvote" data-id="${entry.id}">▼</button>
+async function fetchSubmitterUsername(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/public`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch user info');
+        }
+        const userData = await response.json();
+        return userData.username;
+    } catch (error) {
+        logger.error('Error fetching username:', error);
+        return 'Unknown User';
+    }
+}
+
+function createEntryPreviewHTML(entry, imagePreview) {
+    const categoryName = entry.category || 'Uncategorized';
+    const submitter = { username: 'Preview User' };
+    const isLoggedIn = !!localStorage.getItem('token');
+
+    return `
+    <div class="modal-header">
+        <h2>${entry.name}</h2>
+        <div class="modal-actions">
+            ${isLoggedIn ? '<button class="btn btn-primary edit-entry-btn">Edit</button>' : ''}
+            <span class="compendium-close">&times;</span>
+        </div>
+    </div>
+    <div class="entry-details">
+        <div class="entry-image" style="width: 100%; max-width: 400px; height: 300px; margin: 0 auto 1rem; display: flex; justify-content: center; align-items: center; background-color: var(--background);">
+            ${imagePreview ? imagePreview : '<div class="no-image">No image available</div>'}
+        </div>
+        <div class="entry-info">
+            <p><strong>Category:</strong> ${categoryName}</p>
+            <div>${entry.description}</div>
+            <p><strong>Tags:</strong> ${Array.isArray(entry.tags) ? entry.tags.join(', ') : 'No tags'}</p>
+            ${entry.customFields.length > 0 ? 
+                entry.customFields.map(field => `<p><strong>${field.name}:</strong> ${field.value}</p>`).join('') 
+                : ''}
+            <p><strong>Submitted By:</strong> ${createProfileLink(submitter.username)}</p>
+            <p><strong>Submitted At:</strong> ${formatDate(new Date())}</p>
+        </div>
+    </div>
+    <div class="comments-section">
+        <h3>Comments</h3>
+        <div class="comments-container">
+            <div class="comment">
+                <p class="comment-content">This is a preview comment.</p>
+                <div class="comment-meta">
+                    <span>By ${createProfileLink('Preview User')}</span>
+                    <span>on ${formatDate(new Date())}</span>
+                </div>
+            </div>
+        </div>
+        ${isLoggedIn ? `
+            <form id="comment-form" class="comment-form">
+                <textarea id="comment-content" required placeholder="Add a comment..."></textarea>
+                <button type="submit" class="btn btn-primary">Submit Comment</button>
+            </form>
+        ` : ''}
+    </div>
     `;
+}
 
-    entryElement.insertBefore(votingSystem, entryElement.firstChild);
-
-    const upvoteBtn = votingSystem.querySelector('.upvote');
-    const downvoteBtn = votingSystem.querySelector('.downvote');
-
-    upvoteBtn.addEventListener('click', () => vote(entry.id, 1));
-    downvoteBtn.addEventListener('click', () => vote(entry.id, -1));
+function truncateText(html, maxLength) {
+    if (!html || typeof html !== 'string') return 'No text available';
+    
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = html;
+    
+    let textContent = '';
+    let truncated = false;
+    
+    function traverse(node) {
+        if (textContent.length >= maxLength) return;
+        
+        if (node.nodeType === Node.TEXT_NODE) {
+            const remainingLength = maxLength - textContent.length;
+            const nodeText = node.textContent.trim();
+            if (nodeText.length > remainingLength) {
+                textContent += nodeText.slice(0, remainingLength) + '...';
+                truncated = true;
+            } else {
+                textContent += nodeText;
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.nodeName === 'BR') {
+                textContent += '<br>';
+            }
+            for (let child of node.childNodes) {
+                traverse(child);
+                if (truncated) break;
+            }
+        }
+    }
+    
+    traverse(tempElement);
+    
+    return textContent;
 }
 
 async function vote(entryId, value) {
@@ -446,7 +771,7 @@ async function vote(entryId, value) {
         updateVoteCount(entryId, updatedEntry.votes);
         showSuccess('Vote submitted successfully.');
     } catch (error) {
-        console.error('Error voting:', error);
+        logger.error('Error voting:', error);
         showError(getErrorMessage(error));
     }
 }
@@ -483,7 +808,7 @@ async function fetchTagSuggestions(query) {
         }
         return await response.json();
     } catch (error) {
-        console.error('Error fetching tag suggestions:', error);
+        logger.error('Error fetching tag suggestions:', error);
         return [];
     }
 }
@@ -576,89 +901,88 @@ async function fetchCategories() {
         }
         return await response.json();
     } catch (error) {
-        console.error('Error fetching categories:', error);
+        logger.error('Error fetching categories:', error);
         return [];
     }
 }
 
 function initializeForm() {
+    logger.info('Initializing form');
     setupTagInput();
-    setupImagePreview();
-    loadCategories(true); // Include "Add new category" option
     setupCustomFields();
     setupPreviewButton();
     setupAutoSave();
     setupClearFormButton();
 }
 
-async function setupImagePreview() {
-    const imageInput = document.getElementById('entry-image');
-    const imagePreview = document.getElementById('image-preview');
+function setupImagePreview() {
+    logger.info('Setting up image preview...');
     const dropZone = document.getElementById('image-drop-zone');
+    const imageInput = document.getElementById('entry-image');
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
+    if (!dropZone || !imageInput) {
+        logger.error('Drop zone or image input not found');
+        return;
+    }
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
+    // Remove existing event listeners
+    const newDropZone = dropZone.cloneNode(true);
+    dropZone.parentNode.replaceChild(newDropZone, dropZone);
+    const newImageInput = imageInput.cloneNode(true);
+    imageInput.parentNode.replaceChild(newImageInput, imageInput);
 
-    dropZone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
+    function handleFile(file) {
         if (file && file.type.startsWith('image/')) {
-            await handleImageUpload(file);
-        }
-    });
-
-    dropZone.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    imageInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            await handleImageUpload(file);
-        }
-    });
-
-    async function handleImageUpload(file) {
-        try {
-            showLoading();
-            const compressedFile = await imageCompression(file, {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1920,
-                useWebWorker: true
-            });
-            displayImagePreview(compressedFile);
-        } catch (error) {
-            console.error('Error compressing image:', error);
-            showError(getErrorMessage(error));
-        } finally {
-            hideLoading();
+            handleImageUpload(file);
         }
     }
 
-    function displayImagePreview(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.innerHTML = `
-                <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px;">
-                <p>File size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                <button id="rotate-image">Rotate</button>
-            `;
-            
-            let rotation = 0;
-            document.getElementById('rotate-image').addEventListener('click', () => {
-                rotation = (rotation + 90) % 360;
-                const img = imagePreview.querySelector('img');
-                img.style.transform = `rotate(${rotation}deg)`;
-            });
-        };
-        reader.readAsDataURL(file);
+    newDropZone.addEventListener('click', (e) => {
+        logger.info('Drop zone clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        newImageInput.click();
+    });
+
+    newDropZone.addEventListener('dragover', (e) => {
+        logger.info('Drag over drop zone');
+        e.preventDefault();
+        newDropZone.classList.add('dragover');
+    });
+
+    newDropZone.addEventListener('dragleave', () => {
+        logger.info('Drag leave drop zone');
+        newDropZone.classList.remove('dragover');
+    });
+
+    newDropZone.addEventListener('drop', (e) => {
+        logger.info('File dropped on drop zone');
+        e.preventDefault();
+        newDropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        handleFile(file);
+    });
+
+    newImageInput.addEventListener('change', (e) => {
+        logger.info('File selected via input');
+        const file = e.target.files[0];
+        if (file) {
+            logger.info('File selected:', file.name);
+            handleFile(file);
+        }
+    });
+
+    logger.info('Image preview setup complete');
+}
+
+async function handleImageUpload(file, isEdit = false) {
+    try {
+        const compressedFile = await compressImage(file, 800, 0.8);
+        selectedImage = compressedFile;
+        displayImagePreview(compressedFile, isEdit);
+    } catch (error) {
+        logger.error('Error compressing image:', error);
+        showError(getErrorMessage(error));
     }
 }
 
@@ -666,17 +990,15 @@ function setupCustomFields() {
     const addFieldBtn = document.getElementById('add-field-btn');
     const dynamicFields = document.getElementById('dynamic-fields');
 
-    addFieldBtn.addEventListener('click', () => {
-        const fieldGroup = document.createElement('div');
-        fieldGroup.className = 'form-group dynamic-field';
-        fieldGroup.innerHTML = `
-            <input type="text" class="field-name" placeholder="Field Name">
-            <input type="text" class="field-value" placeholder="Field Value">
-            <button type="button" class="btn-remove-field">Remove</button>
-        `;
-        dynamicFields.appendChild(fieldGroup);
+    // Remove existing event listeners
+    const newAddFieldBtn = addFieldBtn.cloneNode(true);
+    addFieldBtn.parentNode.replaceChild(newAddFieldBtn, addFieldBtn);
+
+    newAddFieldBtn.addEventListener('click', () => {
+        addCustomField('', '', 'dynamic-fields');
     });
 
+    // Event delegation for remove buttons
     dynamicFields.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-remove-field')) {
             e.target.closest('.dynamic-field').remove();
@@ -691,26 +1013,55 @@ function setupPreviewButton() {
     const closeBtn = previewModal.querySelector('.compendium-close');
 
     previewBtn.addEventListener('click', () => {
-        const formData = new FormData(document.getElementById('new-entry-form'));
+        const form = document.getElementById('new-entry-form');
+        const formData = new FormData(form);
         const entry = Object.fromEntries(formData.entries());
-        entry.description = tinymce.get('entry-description').getContent();
+
+        entry.description = tinymce.get('tinymce-editor').getContent();
         entry.tags = Array.from(document.querySelectorAll('.tag-container .tag-text')).map(tag => tag.textContent);
         entry.customFields = Array.from(document.querySelectorAll('.dynamic-field')).map(field => ({
             name: field.querySelector('.field-name').value,
             value: field.querySelector('.field-value').value
         })).filter(field => field.name && field.value);
 
-        previewContent.innerHTML = `
-            <h2>${entry.name}</h2>
-            <p><strong>Category:</strong> ${entry.category}</p>
-            <div>${entry.description}</div>
-            <p><strong>Tags:</strong> ${entry.tags.join(', ')}</p>
-            <h3>Custom Fields:</h3>
-            <ul>
-                ${entry.customFields.map(field => `<li><strong>${field.name}:</strong> ${field.value}</li>`).join('')}
-            </ul>
-        `;
+        const imagePreview = document.getElementById('image-preview').innerHTML;
 
+        previewContent.innerHTML = createEntryPreviewHTML(entry, imagePreview);
+        previewModal.classList.add('active');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        previewModal.classList.remove('active');
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === previewModal) {
+            previewModal.classList.remove('active');
+        }
+    });
+}
+
+function setupEditPreviewButton() {
+    const previewBtn = document.getElementById('edit-preview-btn');
+    const previewModal = document.getElementById('entry-preview');
+    const previewContent = document.getElementById('preview-content');
+    const closeBtn = previewModal.querySelector('.compendium-close');
+
+    previewBtn.addEventListener('click', () => {
+        const form = document.getElementById('edit-entry-form');
+        const formData = new FormData(form);
+        const entry = Object.fromEntries(formData.entries());
+
+        entry.description = tinymce.get('edit-tinymce-editor').getContent();
+        entry.tags = Array.from(document.querySelectorAll('#edit-tag-container .tag-text')).map(tag => tag.textContent);
+        entry.customFields = Array.from(document.querySelectorAll('#edit-dynamic-fields .dynamic-field')).map(field => ({
+            name: field.querySelector('.field-name').value,
+            value: field.querySelector('.field-value').value
+        })).filter(field => field.name && field.value);
+
+        const imagePreview = document.getElementById('edit-image-preview').innerHTML;
+
+        previewContent.innerHTML = createEntryPreviewHTML(entry, imagePreview);
         previewModal.classList.add('active');
     });
 
@@ -766,12 +1117,39 @@ function setupClearFormButton() {
     const form = document.getElementById('new-entry-form');
 
     clearFormBtn.addEventListener('click', () => {
-        form.reset();
-        localStorage.removeItem('compendiumFormData');
-        document.getElementById('image-preview').innerHTML = '';
-        document.getElementById('dynamic-fields').innerHTML = '';
-        tinymce.get('entry-description').setContent('');
+        resetForm();
+        clearAutoSavedData();
     });
+}
+
+function resetForm() {
+    logger.info('Resetting form');
+    document.getElementById('new-entry-form').reset();
+    const editor = tinymce.get('tinymce-editor');
+    if (editor && editor.initialized) {
+        try {
+            editor.setContent('');
+        } catch (error) {
+            logger.warn('Error resetting TinyMCE content:', error);
+        }
+    } else {
+        logger.warn('TinyMCE editor not initialized during form reset');
+    }
+    
+    document.getElementById('image-preview').innerHTML = '';
+    document.querySelector('.tag-container').innerHTML = ''; // Clear tags
+    document.getElementById('dynamic-fields').innerHTML = '';
+    
+    const imageInput = document.getElementById('edit-entry-image');
+    if (imageInput) {
+        imageInput.value = '';
+    }
+
+    // Clear tag input
+    const tagInput = document.getElementById('tag-input');
+    if (tagInput) {
+        tagInput.value = '';
+    }
 }
 
 function initializeTinyMCE(selector = '#tinymce-editor') {
@@ -801,7 +1179,7 @@ function initializeTinyMCE(selector = '#tinymce-editor') {
             content_css: 'dark',
             setup: function(editor) {
                 editor.on('init', function() {
-                    console.log('TinyMCE editor initialized');
+                    logger.info('TinyMCE editor initialized');
                     editor.getBody().style.backgroundColor = 'var(--background)';
                     editor.getBody().style.color = '#ffffff';
                     resolve(editor);
@@ -817,43 +1195,41 @@ function initializeTinyMCE(selector = '#tinymce-editor') {
                 });
             }
         }).catch(error => {
-            console.error('TinyMCE initialization failed:', error);
+            logger.error('TinyMCE initialization failed:', error);
             reject(error);
         });
     });
 }
 
-// Add this function to handle responsive layout
 function handleResponsiveLayout() {
     const compendiumList = document.getElementById('compendium-list');
     if (window.innerWidth <= 768) {
-        if (compendiumList.classList.contains('compendium-grid')) {
-            compendiumList.classList.remove('compendium-grid');
-            if (msnry) {
-                msnry.destroy();
-                msnry = null;
-            }
-        }
+        compendiumList.classList.remove('compendium-grid');
     } else {
-        if (!compendiumList.classList.contains('compendium-grid')) {
-            compendiumList.classList.add('compendium-grid');
-            initializeMasonry();
-        }
+        compendiumList.classList.add('compendium-grid');
     }
 }
 
-// Modify the existing initializeMasonry function
 function initializeMasonry() {
     const compendiumList = document.getElementById('compendium-list');
-    msnry = new Masonry(compendiumList, {
-        itemSelector: '.compendium-entry',
-        columnWidth: '.compendium-entry',
-        percentPosition: true,
-        gutter: 20
-    });
+    if (!compendiumList) {
+        logger.error('Compendium list element not found');
+        return;
+    }
 
-    imagesLoaded(compendiumList).on('progress', () => {
-        msnry.layout();
+    // Remove Masonry initialization
+    if (msnry) {
+        msnry.destroy();
+        msnry = null;
+    }
+
+    // Use CSS grid instead
+    compendiumList.classList.add('compendium-grid');
+
+    // Ensure images are loaded before calculating layout
+    imagesLoaded(compendiumList, function() {
+        // Force a reflow to ensure proper layout
+        compendiumList.offsetHeight;
     });
 }
 
@@ -862,20 +1238,25 @@ window.addEventListener('load', handleResponsiveLayout);
 window.addEventListener('resize', handleResponsiveLayout);
                     
 async function loadCategories(includeNewOption = false, selectElementId = 'entry-category') {
-    console.log('loadCategories called with:', { includeNewOption, selectElementId });
+    logger.info('loadCategories called with:', { includeNewOption, selectElementId });
     try {
         const response = await fetch('/api/categories');
         if (!response.ok) {
             throw new Error('Failed to fetch categories');
         }
         const categories = await response.json();
-        console.log('Fetched categories:', categories);
+        logger.info('Fetched categories:', categories);
         const categorySelect = document.getElementById(selectElementId);
-        console.log('Category select element:', categorySelect);
+        logger.info('Category select element:', categorySelect);
         
+        if (!categorySelect) {
+            logger.error(`Category select element with id ${selectElementId} not found`);
+            return;
+        }
+
         // Function to populate options
         const populateOptions = (selectElement, includeAll = false, includeNew = false) => {
-            console.log('Populating options:', { includeAll, includeNew });
+            logger.info('Populating options:', { includeAll, includeNew });
             selectElement.innerHTML = includeAll ? '<option value="">All Categories</option>' : '<option value="">Select a category</option>';
             
             categories.forEach(category => {
@@ -886,7 +1267,7 @@ async function loadCategories(includeNewOption = false, selectElementId = 'entry
             });
 
             if (includeNew) {
-                console.log('Adding new category option');
+                logger.info('Adding new category option');
                 const newCategoryOption = document.createElement('option');
                 newCategoryOption.value = 'new';
                 newCategoryOption.textContent = '+ Add new category';
@@ -895,8 +1276,11 @@ async function loadCategories(includeNewOption = false, selectElementId = 'entry
         };
 
         // Populate the dropdown
-        if (categorySelect) {
-            populateOptions(categorySelect, false, includeNewOption);
+        populateOptions(categorySelect, false, includeNewOption);
+
+        // If it's the edit form, we need to wait a bit for the options to be added
+        if (selectElementId === 'edit-entry-category') {
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         // Populate the main page filter dropdown if it exists
@@ -905,7 +1289,7 @@ async function loadCategories(includeNewOption = false, selectElementId = 'entry
             populateOptions(categoryFilter, true, false);
         }
     } catch (error) {
-        console.error('Error loading categories:', error);
+        logger.error('Error loading categories:', error);
         showError(getErrorMessage(error));
     }
 }
@@ -929,149 +1313,165 @@ async function fetchComments(entryId) {
         }
         return await response.json();
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', error);
         showError(getErrorMessage(error));
         return [];
     }
 }
 
 async function showEntryDetails(entryId) {
+    logger.info('showEntryDetails called with ID:', entryId);
+    if (!entryId) {
+        logger.error('Attempted to show details for undefined entry ID');
+        showError('Unable to display entry details. Please try again.');
+        return;
+    }
     showLoading();
     try {
         const [entry, comments] = await Promise.all([
             fetchCompendiumEntry(entryId),
             fetchComments(entryId)
         ]);
+        logger.info('Fetched entry details:', entry);
+        logger.info('Fetched comments:', comments);
 
         let submitter = { username: 'Anonymous Swashbuckler' };
-        const isLoggedIn = !!localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+        const isLoggedIn = !!user;
 
-        if (isLoggedIn) {
-            try {
-                const response = await fetch(`/api/users/${entry.submitted_by}`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                if (response.ok) {
-                    submitter = await response.json();
-                } else {
-                    console.warn(`Failed to fetch submitter info: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error fetching submitter info:', error);
+        try {
+            const response = await fetch(`/api/users/${entry.submitted_by}/public`);
+            if (response.ok) {
+                submitter = await response.json();
+            } else {
+                logger.warn(`Failed to fetch submitter info: ${response.status}`);
             }
-        } else {
-            try {
-                const response = await fetch(`/api/users/${entry.submitted_by}/public`);
-                if (response.ok) {
-                    submitter = await response.json();
-                } else {
-                    console.warn(`Failed to fetch public submitter info: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error fetching public submitter info:', error);
-            }
+        } catch (error) {
+            logger.error('Error fetching submitter info:', error);
         }
 
         const entryModal = document.getElementById('compendium-entry-modal');
         const entryContent = document.getElementById('compendium-entry-content');
 
-        const currentUserId = localStorage.getItem('userId');
-        const isEntryOwner = isLoggedIn && entry.submitted_by === currentUserId;
-        const isAdminUser = isAdmin();
+        const isEntryOwner = isLoggedIn && entry.submitted_by === user.id;
+        const canEdit = hasPermission(user, PERMISSIONS.EDIT_COMPENDIUM) || isEntryOwner;
+        const canDelete = hasPermission(user, PERMISSIONS.DELETE_COMPENDIUM);
+        const canComment = hasPermission(user, PERMISSIONS.COMMENT_COMPENDIUM);
 
-        // Fetch the category name
-        let categoryName = 'Uncategorized';
-        if (entry.category) {
-            try {
-                const categoryResponse = await fetch(`/api/categories/${entry.category}`);
-                if (categoryResponse.ok) {
-                    const category = await categoryResponse.json();
-                    categoryName = category.name;
-                } else {
-                    console.warn(`Failed to fetch category: ${categoryResponse.status}`);
-                }
-            } catch (error) {
-                console.error('Error fetching category:', error);
-            }
-        }
+        const categoryName = entry.category_name || 'Uncategorized';
+
+        // Create the profile link
+        const submitterProfileLink = await createProfileLink(submitter.username);
 
         entryContent.innerHTML = `
-            <div class="entry-actions">
-                ${isEntryOwner || isAdminUser ? '<button class="btn-edit">Edit</button>' : ''}
-                ${isAdminUser ? '<button class="btn-delete">Delete</button>' : ''}
-            </div>
-            <h2>${entry.name}</h2>
-            <div class="entry-details">
-                <div class="entry-image" style="width: 100%; max-width: 400px; height: 300px; margin: 0 auto 1rem; display: flex; justify-content: center; align-items: center; background-color: var(--background);">
-                    ${entry.image_path ? `<img src="${entry.image_path}" alt="${entry.name}" style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;">` : '<div class="no-image">No image available</div>'}
+    <div class="modal-header">
+        <h2>${entry.name}</h2>
+        <div class="modal-actions">
+            ${canEdit ? '<button class="btn btn-primary edit-entry-btn">Edit</button>' : ''}
+            ${canDelete ? '<button class="btn btn-danger delete-entry-btn">Delete</button>' : ''}
+            <span class="compendium-close">&times;</span>
+        </div>
+    </div>
+    <div class="entry-details">
+        <div class="entry-image" style="width: 100%; max-width: 400px; height: 300px; margin: 0 auto 1rem; display: flex; justify-content: center; align-items: center; background-color: var(--background);">
+            ${entry.image_path ? `<img src="${entry.image_path}" alt="${entry.name}" style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;">` : '<div class="no-image">No image available</div>'}
+        </div>
+        <div class="entry-info">
+            <p><strong>Category:</strong> ${categoryName}</p>
+            <div>${entry.description}</div>
+            <p><strong>Tags:</strong> ${Array.isArray(entry.tags) ? entry.tags.join(', ') : 'No tags'}</p>
+            ${Array.isArray(entry.custom_fields) && entry.custom_fields.length > 0 ? 
+                entry.custom_fields.map(field => `<p><strong>${field.name}:</strong> ${field.value}</p>`).join('') 
+                : ''}
+            <p><strong>Submitted By:</strong> <span id="submitter-profile-link"></span></p>
+            <p><strong>Submitted At:</strong> ${formatDate(entry.submitted_at)}</p>
+        </div>
+    </div>
+    <div class="comments-section">
+        <h3>Comments</h3>
+        <div class="comments-container">
+            ${comments.map(comment => `
+                <div class="comment">
+                    <p class="comment-content">${comment.content}</p>
+                    <div class="comment-meta">
+                        <span>By <span class="comment-author" data-username="${comment.author}"></span></span>
+                        <span>on ${formatDate(comment.created_at)}</span>
+                    </div>
                 </div>
-                <div class="entry-info">
-                    <p><strong>Category:</strong> ${categoryName}</p>
-                    <div>${entry.description}</div>
-                    <p><strong>Tags:</strong> ${Array.isArray(entry.tags) ? entry.tags.join(', ') : 'No tags'}</p>
-                    ${Array.isArray(entry.custom_fields) && entry.custom_fields.length > 0 ? 
-                        entry.custom_fields.map(field => `<p><strong>${field.name}:</strong> ${field.value}</p>`).join('') 
-                        : ''}
-                    <p><strong>Submitted By:</strong> ${submitter.username}</p>
-                    <p><strong>Submitted At:</strong> ${formatDate(entry.submitted_at)}</p>
-                </div>
-            </div>
-            <div class="comments-section">
-                <h3>Comments</h3>
-                <div class="comments-container">
-                    ${comments.map(comment => `
-                        <div class="comment">
-                            <p class="comment-content">${comment.content}</p>
-                            <div class="comment-meta">
-                                <span>By ${comment.author}</span>
-                                <span>on ${formatDate(comment.created_at)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                ${isLoggedIn ? `
-                    <form id="comment-form" class="comment-form">
-                        <textarea id="comment-content" required placeholder="Add a comment..."></textarea>
-                        <button type="submit" class="btn btn-primary">Submit Comment</button>
-                    </form>
-                ` : '<p>Please <a href="/login.html">log in</a> to add comments.</p>'}
-            </div>
+            `).join('')}
+        </div>
+        ${canComment ? `
+            <form id="comment-form" class="comment-form">
+                <textarea id="comment-content" required placeholder="Add a comment..."></textarea>
+                <button type="submit" class="btn btn-primary">Submit Comment</button>
+            </form>
+        ` : isLoggedIn ? '<p>You do not have permission to comment.</p>' : '<p>Please <a href="/login.html">log in</a> to add comments.</p>'}
+    </div>
         `;
+
+        // Add the submitter profile link to the DOM
+        const submitterProfileLinkContainer = entryContent.querySelector('#submitter-profile-link');
+        submitterProfileLinkContainer.appendChild(submitterProfileLink);
+
+        // Create profile links for comment authors
+        const commentAuthors = entryContent.querySelectorAll('.comment-author');
+        for (const authorElement of commentAuthors) {
+            const username = authorElement.dataset.username;
+            const profileLink = await createProfileLink(username);
+            authorElement.appendChild(profileLink);
+        }
 
         entryModal.classList.add('active');
 
         // Add event listener for the close button
-        const closeBtn = entryModal.querySelector('.compendium-close');
+        const closeBtn = entryContent.querySelector('.compendium-close');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => entryModal.classList.remove('active'));
+            logger.info('Close button found, adding event listener');
+            closeBtn.addEventListener('click', () => {
+                logger.info('Close button clicked');
+                closeEntryModal();
+            });
+        } else {
+            logger.error('Close button not found in the modal content');
         }
 
-        if (isEntryOwner || isAdminUser) {
-            const editBtn = entryContent.querySelector('.btn-edit');
+        if (canEdit) {
+            const editBtn = entryContent.querySelector('.edit-entry-btn');
             editBtn.addEventListener('click', () => editEntry(entry));
         }
 
-        if (isAdminUser) {
-            const deleteBtn = entryContent.querySelector('.btn-delete');
+        if (canDelete) {
+            const deleteBtn = entryContent.querySelector('.delete-entry-btn');
             deleteBtn.addEventListener('click', () => deleteEntry(entry.id));
         }
 
-        const commentForm = entryContent.querySelector('#comment-form');
-        if (commentForm) {
-            commentForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const content = document.getElementById('comment-content').value;
-                await addComment(entryId, content);
-                showEntryDetails(entryId); // Refresh the modal with the new comment
-            });
+        if (canComment) {
+            const commentForm = entryContent.querySelector('#comment-form');
+            if (commentForm) {
+                commentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const content = document.getElementById('comment-content').value;
+                    await addComment(entryId, content);
+                    showEntryDetails(entryId); // Refresh the modal with the new comment
+                });
+            }
         }
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error showing entry details:', error);
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
+    }
+}
+
+function closeEntryModal() {
+    logger.info('closeEntryModal function called');
+    const entryModal = document.getElementById('compendium-entry-modal');
+    if (entryModal) {
+        logger.info('Removing active class from entry modal');
+        entryModal.classList.remove('active');
+    } else {
+        logger.error('Entry modal element not found');
     }
 }
 
@@ -1092,7 +1492,7 @@ async function addComment(entryId, content) {
 
         showSuccess('Comment added successfully');
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', error);
         showError(getErrorMessage(error));
     }
 }
@@ -1115,12 +1515,13 @@ async function viewCompendiumEntry(entryId) {
         displayCompendiumEntry(entry);
         loadComments(entryId);
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', error);
         showError(getErrorMessage(error));
     }
 }
 
 async function fetchCompendiumEntry(entryId) {
+    logger.info('Fetching compendium entry with ID:', entryId);
     try {
         const response = await fetch(`/api/compendium/${entryId}`);
         if (!response.ok) {
@@ -1128,15 +1529,18 @@ async function fetchCompendiumEntry(entryId) {
         }
         const entry = await response.json();
         
-        // Parse tags and custom_fields if they're strings
-        entry.tags = Array.isArray(entry.tags) ? entry.tags : 
-                     (typeof entry.tags === 'string' ? JSON.parse(entry.tags || '[]') : []);
-        entry.custom_fields = Array.isArray(entry.custom_fields) ? entry.custom_fields :
-                              (typeof entry.custom_fields === 'string' ? JSON.parse(entry.custom_fields || '[]') : []);
+        // Ensure category_name is set
+        if (!entry.category_name && entry.category) {
+            const categoryResponse = await fetch(`/api/categories/${entry.category}`);
+            if (categoryResponse.ok) {
+                const category = await categoryResponse.json();
+                entry.category_name = category.name;
+            }
+        }
         
         return entry;
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', error);
         showError(getErrorMessage(error));
         throw error;
     }
@@ -1187,7 +1591,7 @@ async function loadComments(entryId) {
         const comments = await response.json();
         displayComments(comments);
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error description:', error);
         showError(getErrorMessage(error));
     }
 }
@@ -1207,7 +1611,7 @@ function displayComments(comments) {
         commentElement.innerHTML = `
             <p>${comment.content}</p>
             <div class="comment-meta">
-                <span>By ${comment.author}</span>
+                <span>By ${createProfileLink(comment.author)}</span>
                 <span>on ${formatDate(comment.created_at)}</span>
             </div>
         `;
@@ -1216,138 +1620,164 @@ function displayComments(comments) {
 }
 
 async function editEntry(entry) {
-    // Close the view modal
-    document.getElementById('compendium-entry-modal').style.display = 'none';
-
+    logger.info('Editing entry:', entry);
     const editModal = document.getElementById('compendium-edit-modal');
-    editModal.classList.add('active');
+    if (!editModal) {
+        logger.error('Edit modal not found in the DOM');
+        showError('Unable to edit entry. Please try again later.');
+        return;
+    }
 
-    // Populate the edit form with the current entry data
+    const editForm = document.getElementById('edit-entry-form');
+    if (!editForm) {
+        logger.error('Edit form not found in the DOM');
+        showError('Unable to edit entry. Please try again later.');
+        return;
+    }
+
+    // Load categories before populating the form
+    await loadCategories(true, 'edit-entry-category');
+
+    // Populate form fields
     document.getElementById('edit-entry-name').value = entry.name;
     
-    // Load categories before setting the value
-    await loadCategories(true, 'edit-entry-category');
-    document.getElementById('edit-entry-category').value = entry.category;
-
-    // Initialize or update TinyMCE for the edit modal
-    try {
-        if (!tinymce.get('edit-tinymce-editor')) {
-            await initializeTinyMCE('#edit-tinymce-editor');
+    // Set the correct category
+    const categorySelect = document.getElementById('edit-entry-category');
+    if (entry.category) {
+        categorySelect.value = entry.category;
+    } else if (entry.category_name) {
+        // If category is not set but category_name is available, select it or create a new option
+        const option = Array.from(categorySelect.options).find(opt => opt.textContent === entry.category_name);
+        if (option) {
+            categorySelect.value = option.value;
+        } else {
+            const newOption = new Option(entry.category_name, 'new');
+            categorySelect.add(newOption);
+            categorySelect.value = 'new';
+            document.getElementById('edit-new-category-input').value = entry.category_name;
+            document.getElementById('edit-new-category-input').style.display = 'block';
         }
-        const editor = tinymce.get('edit-tinymce-editor');
-        editor.setContent(entry.description);
-    } catch (error) {
-        console.error('Error description:', error);
-        showError(getErrorMessage(error));
     }
 
-    // Set up tag input handling
-    const tagInput = document.getElementById('edit-tag-input');
-    const tagContainer = document.getElementById('edit-tag-container');
-    
-    tagInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const tagName = tagInput.value.trim();
-            if (tagName) {
-                addTag(tagName, 'edit-tag-container');
-                tagInput.value = '';
-            }
-        }
-    });
+    // Populate tags
+    const editTagContainer = document.getElementById('edit-tag-container');
+    editTagContainer.innerHTML = '';
+    entry.tags.forEach(tag => addTag(tag, 'edit-tag-container'));
 
-    // Populate existing tags
-    tagContainer.innerHTML = '';
-    if (Array.isArray(entry.tags)) {
-        entry.tags.forEach(tag => addTag(tag, 'edit-tag-container'));
+    // Set up image preview
+    const editImagePreview = document.getElementById('edit-image-preview');
+    if (entry.image_path) {
+        editImagePreview.innerHTML = `<img src="${entry.image_path}" alt="${entry.name}" style="max-width: 200px; max-height: 200px;">`;
+    } else {
+        editImagePreview.innerHTML = '';
     }
+
+    // Initialize TinyMCE for edit form if not already initialized
+    let editor = tinymce.get('edit-tinymce-editor');
+    if (!editor) {
+        editor = await initializeTinyMCE('#edit-tinymce-editor');
+    }
+
+    // Set TinyMCE content
+    editor.setContent(entry.description);
 
     // Populate custom fields
-    const dynamicFields = document.getElementById('edit-dynamic-fields');
-    dynamicFields.innerHTML = '';
-    if (Array.isArray(entry.custom_fields)) {
+    const editDynamicFields = document.getElementById('edit-dynamic-fields');
+    editDynamicFields.innerHTML = '';
+    if (entry.custom_fields && entry.custom_fields.length > 0) {
         entry.custom_fields.forEach(field => {
             addCustomField(field.name, field.value, 'edit-dynamic-fields');
         });
     }
 
-    // If there's an image, display it in the preview
-    const imagePreview = document.getElementById('edit-image-preview');
-    if (entry.image_path) {
-        imagePreview.innerHTML = `<img src="${entry.image_path}" alt="Entry Image" style="max-width: 200px; max-height: 200px;">`;
-    } else {
-        imagePreview.innerHTML = '';
+    // Set up event listener for adding new custom fields
+    const editAddFieldBtn = document.getElementById('edit-add-field-btn');
+    if (editAddFieldBtn) {
+        editAddFieldBtn.addEventListener('click', () => addCustomField('', '', 'edit-dynamic-fields'));
     }
 
-    // Change the form submission handler to update instead of create
-    const form = document.getElementById('edit-entry-form');
-    form.onsubmit = (e) => updateCompendiumEntry(e, entry.id);
+    // Set up form submission
+    editForm.onsubmit = (e) => handleEditFormSubmit(e, entry.id);
 
-    // Change the submit button text to "Update Entry"
-    const submitButton = form.querySelector('button[type="submit"]');
-    if (submitButton) {
-        submitButton.textContent = 'Update Entry';
-    }
-
-    const closeButton = editModal.querySelector('.compendium-close');
-    if (closeButton) {
-        closeButton.addEventListener('click', () => {
-            editModal.classList.remove('active');
-            tinymce.remove('#edit-tinymce-editor');
-        });
-    }
-
+    // Set up image upload functionality
     setupEditImageDropZone();
+    logger.info('Image drop zone setup called from editEntry');
+
+    // Set up other necessary listeners
+    setupEditPreviewButton();
+
+    document.getElementById('compendium-entry-modal').classList.remove('active');
+    // Show the edit modal
+    editModal.classList.add('active');
+
+    const closeBtn = editModal.querySelector('.compendium-close');
+    closeBtn.addEventListener('click', closeEditModal);
 }
 
-async function updateCompendiumEntry(event, entryId) {
+async function handleEditFormSubmit(event, entryId) {
     event.preventDefault();
+    logger.info('Edit form submission started');
+    if (isUpdating) return;
+    isUpdating = true;
     showLoading();
 
-    const form = event.target;
-    const formData = new FormData(form);
-    formData.append('id', entryId);
-
-    // Get content from TinyMCE
-    const editor = tinymce.get('edit-tinymce-editor');
-    if (editor) {
-        const description = editor.getContent();
-        formData.set('description', description);
-        if (!description.trim()) {
-            showError('Please enter a description for the entry.');
-            hideLoading();
-            return;
-        }
-    } else {
-        console.error('TinyMCE editor not initialized');
-        showError('Error: Editor not initialized. Please try refreshing the page.');
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.EDIT_COMPENDIUM)) {
+        showError('You do not have permission to edit entries');
         hideLoading();
+        isUpdating = false;
         return;
     }
 
-    // Collect tags
-    const tagElements = document.querySelectorAll('#edit-tag-container .tag-text');
-    const tags = Array.from(tagElements).map(tag => tag.textContent.trim());
-    formData.set('tags', JSON.stringify(tags));
-
-    // Collect custom fields
-    const customFieldsContainer = document.getElementById('edit-dynamic-fields');
-    const customFields = [];
-    customFieldsContainer.querySelectorAll('.dynamic-field').forEach(field => {
-        const name = field.querySelector('.field-name').value.trim();
-        const value = field.querySelector('.field-value').value.trim();
-        if (name && value) {
-            customFields.push({ name, value });
-        }
-    });
-    formData.set('custom_fields', JSON.stringify(customFields));
-
-    // If no new image is selected, don't send the image field
-    if (formData.get('image').size === 0) {
-        formData.delete('image');
-    }
-
     try {
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const editor = tinymce.get('edit-tinymce-editor');
+        if (editor) {
+            const description = editor.getContent();
+            if (!description.trim()) {
+                throw new Error('Description is required');
+            }
+            formData.set('description', description);
+        } else {
+            throw new Error('TinyMCE editor not initialized');
+        }
+
+        const tagElements = document.querySelectorAll('#edit-tag-container .tag-text');
+        const tags = Array.from(tagElements).map(tag => tag.textContent.trim());
+        formData.set('tags', JSON.stringify(tags));
+
+        const customFieldsContainer = document.getElementById('edit-dynamic-fields');
+        const customFields = Array.from(customFieldsContainer.querySelectorAll('.dynamic-field')).map(field => ({
+            name: field.querySelector('.field-name').value.trim(),
+            value: field.querySelector('.field-value').value.trim()
+        })).filter(field => field.name && field.value);
+        formData.set('custom_fields', JSON.stringify(customFields));
+
+        const categorySelect = document.getElementById('edit-entry-category');
+        const newCategoryInput = document.getElementById('edit-new-category-input');
+        if (categorySelect.value === 'new' && newCategoryInput.value.trim()) {
+            formData.set('category_name', newCategoryInput.value.trim());
+        } else {
+            formData.set('category_name', categorySelect.options[categorySelect.selectedIndex].text);
+        }
+
+        // Handle image upload
+        const imageInput = document.getElementById('edit-entry-image');
+        const imageFile = imageInput.files[0];
+        if (imageFile) {
+            formData.set('image', imageFile);
+            logger.info('New image file selected:', imageFile.name);
+        } else {
+            logger.info('No new image file selected');
+            // Preserve the existing image if no new image is selected
+            const existingImagePreview = document.getElementById('edit-image-preview').querySelector('img');
+            if (existingImagePreview) {
+                formData.set('image_path', existingImagePreview.src);
+            }
+        }
+
         const response = await fetch(`/api/compendium/${entryId}`, {
             method: 'PUT',
             body: formData,
@@ -1357,26 +1787,90 @@ async function updateCompendiumEntry(event, entryId) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to update entry');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update entry');
         }
 
         const result = await response.json();
+        logger.info('Server response:', result);
+
+        if (!result.entry) {
+            throw new Error('Server response is missing entry data');
+        }
+
         showSuccess('Entry updated successfully');
-        form.reset();
-        document.getElementById('compendium-edit-modal').classList.remove('active');
-        tinymce.remove('#edit-tinymce-editor');
-        loadCompendiumEntries(); // Refresh the entries list
+        closeEditModal();
+        
+        // Reload all entries to ensure the updated entry is in the current view
+        await loadCompendiumEntries(currentPage);
+        
+        // Update the specific entry in the DOM
+        const updatedEntry = allEntries.find(entry => entry.id === entryId);
+        if (updatedEntry) {
+            updateEntryInDOM(updatedEntry);
+        } else {
+            logger.warn(`Updated entry not found in allEntries: ${entryId}`);
+        }
+
+        // Re-initialize listeners after update
+        setupEntryListeners();
+
+        // Show the updated entry details after a short delay
+        setTimeout(() => {
+            showEntryDetails(entryId);
+        }, 100);
+
     } catch (error) {
-        console.error('Error description:', error);
+        logger.error('Error updating entry:', error.message);
         showError(getErrorMessage(error));
     } finally {
         hideLoading();
+        isUpdating = false;
     }
 }
 
+function closeEditModal() {
+    const editModal = document.getElementById('compendium-edit-modal');
+    if (editModal) {
+        editModal.classList.remove('active');
+    }
+    tinymce.remove('#edit-tinymce-editor');
+    
+    // Remove all event listeners from the edit modal
+    const closeButton = editModal.querySelector('.compendium-close');
+    if (closeButton) {
+        closeButton.removeEventListener('click', closeEditModal);
+    }
+    
+    // Reset the edit form
+    const editForm = document.getElementById('edit-entry-form');
+    if (editForm) {
+        editForm.reset();
+    }
+    
+    // Ensure the regular compendium modal is in a clean state
+    const entryModal = document.getElementById('compendium-entry-modal');
+    entryModal.classList.remove('active');
+    const entryContent = document.getElementById('compendium-entry-content');
+    entryContent.innerHTML = '';
+
+    // Re-initialize entry listeners
+    setupEntryListeners();
+
+    // Reinitialize Masonry layout
+    initializeMasonry();
+}
+
+let isDeleting = false;
+
 async function deleteEntry(entryId) {
-    if (!isAdmin()) {
-        showError('Only administrators can delete entries.');
+    if (isDeleting) return;
+    isDeleting = true;
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!hasPermission(user, PERMISSIONS.DELETE_COMPENDIUM)) {
+        showError('You do not have permission to delete entries.');
+        isDeleting = false;
         return;
     }
 
@@ -1392,19 +1886,39 @@ async function deleteEntry(entryId) {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                console.error('Detailed error:', errorData);
+                logger.error('Detailed error:', errorData);
                 throw new Error(`Failed to delete entry: ${errorData.details}`);
             }
 
-            showSuccess('Entry deleted successfully');
-            document.getElementById('compendium-entry-modal').classList.remove('active');
-            loadCompendiumEntries(); // Refresh the entries list
+            const result = await response.json();
+            if (result.message === 'Entry deleted successfully') {
+                showSuccess('Entry deleted successfully');
+                document.getElementById('compendium-entry-modal').classList.remove('active');
+                
+                const entryElement = document.querySelector(`.compendium-entry[data-id="${entryId}"]`);
+                if (entryElement) {
+                    entryElement.remove();
+                }
+
+                if (result.categoryDeleted) {
+                    // Refresh the category filter
+                    await loadCategories(false, 'category-filter');
+                }
+
+                initializeMasonry();
+                setupEntryListeners();
+            } else {
+                throw new Error('Failed to delete entry');
+            }
         } catch (error) {
-            console.error('Error description:', error);
+            logger.error('Error description:', error);
             showError(getErrorMessage(error));
         } finally {
             hideLoading();
+            isDeleting = false;
         }
+    } else {
+        isDeleting = false;
     }
 }
 
@@ -1413,6 +1927,12 @@ function setupCommentSubmission(entryId) {
     const submitButton = commentForm.querySelector('#submit-comment');
 
     submitButton.addEventListener('click', async () => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!hasPermission(user, PERMISSIONS.COMMENT_COMPENDIUM)) {
+            showError('You do not have permission to comment on entries');
+            return;
+        }
+
         const commentContent = document.getElementById('new-comment').value;
         if (!commentContent.trim()) {
             showError('Please enter a comment before submitting.');
@@ -1437,7 +1957,7 @@ function setupCommentSubmission(entryId) {
             await loadComments(entryId);
             showSuccess('Comment submitted successfully.');
         } catch (error) {
-            console.error('Error description:', error);
+            logger.error('Error description:', error);
             showError(getErrorMessage(error));
         }
     });
@@ -1450,10 +1970,6 @@ function clearAutoSavedData() {
         localStorage.removeItem(`compendium_${input.id}`);
     });
 }
-
-document.addEventListener('DOMContentLoaded', async () => {
-    setupSubmissionModal();
-});
 
 function addTag(tagName, containerId = 'tag-container') {
     const tagContainer = document.getElementById(containerId);
@@ -1471,10 +1987,10 @@ function addTag(tagName, containerId = 'tag-container') {
 function addCustomField(name = '', value = '', containerId = 'dynamic-fields') {
     const dynamicFields = document.getElementById(containerId);
     const fieldGroup = document.createElement('div');
-    fieldGroup.className = 'form-group dynamic-field';
+    fieldGroup.className = 'dynamic-field';
     fieldGroup.innerHTML = `
-        <input type="text" class="field-name" value="${name}" placeholder="Field Name">
-        <input type="text" class="field-value" value="${value}" placeholder="Field Value">
+        <input type="text" class="field-name" placeholder="Field Name" value="${name}">
+        <input type="text" class="field-value" placeholder="Field Value" value="${value}">
         <button type="button" class="btn-remove-field">Remove</button>
     `;
     dynamicFields.appendChild(fieldGroup);
@@ -1483,56 +1999,111 @@ function addCustomField(name = '', value = '', containerId = 'dynamic-fields') {
 }
 
 function setupEditImageDropZone() {
+    logger.info('setupEditImageDropZone called');
+    const dropZone = document.getElementById('edit-image-drop-zone');
     const imageInput = document.getElementById('edit-entry-image');
     const imagePreview = document.getElementById('edit-image-preview');
-    const dropZone = document.getElementById('edit-image-drop-zone');
 
-    dropZone.addEventListener('dragover', (e) => {
+    logger.info('Drop zone element:', dropZone);
+    logger.info('Image input element:', imageInput);
+    logger.info('Image preview element:', imagePreview);
+
+    if (!dropZone || !imageInput || !imagePreview) {
+        logger.error('Required elements not found');
+        return;
+    }
+
+    // Remove any existing event listeners
+    const newDropZone = dropZone.cloneNode(true);
+    dropZone.parentNode.replaceChild(newDropZone, dropZone);
+    const newImageInput = imageInput.cloneNode(true);
+    imageInput.parentNode.replaceChild(newImageInput, imageInput);
+
+    newDropZone.addEventListener('click', function(e) {
+        logger.info('Drop zone clicked');
         e.preventDefault();
-        dropZone.classList.add('dragover');
+        e.stopPropagation();
+        newImageInput.click();
+        logger.info('Triggered click on image input');
     });
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            imageInput.files = e.dataTransfer.files;
-            displayImagePreview(file, imagePreview);
-        }
-    });
-
-    dropZone.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    imageInput.addEventListener('change', (e) => {
+    newImageInput.addEventListener('change', function(e) {
+        logger.info('File input changed');
         const file = e.target.files[0];
         if (file) {
-            displayImagePreview(file, imagePreview);
+            logger.info('File selected:', file.name);
+            handleEditImageUpload(file);
+            // Add this line to update the FormData
+            document.getElementById('edit-entry-form').elements['image'].files = e.target.files;
+        } else {
+            logger.warn('No file selected');
         }
     });
+
+    logger.info('Edit image drop zone setup complete');
 }
 
-function displayImagePreview(file, previewElement) {
+function handleEditImageUpload(file) {
+    logger.info('Handling edit image upload:', file.name);
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        logger.info('FileReader onload event fired');
+        const imagePreview = document.getElementById('edit-image-preview');
+        imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px;">`;
+        logger.info('Image preview updated');
+    }
+    reader.readAsDataURL(file);
+}
+
+function displayImagePreview(file, isEdit = false) {
+    logger.info(`Displaying image preview for ${isEdit ? 'edit' : 'new'} entry:`, file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
-        previewElement.innerHTML = `
+        logger.info('FileReader onload event fired');
+        const imagePreview = document.getElementById(isEdit ? 'edit-image-preview' : 'image-preview');
+        imagePreview.innerHTML = `
             <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px;">
             <p>File size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-            <button id="rotate-image">Rotate</button>
+            <button type="button" id="${isEdit ? 'edit-' : ''}rotate-image">Rotate</button>
         `;
         
         let rotation = 0;
-        document.getElementById('rotate-image').addEventListener('click', () => {
+        document.getElementById(`${isEdit ? 'edit-' : ''}rotate-image`).addEventListener('click', () => {
             rotation = (rotation + 90) % 360;
-            const img = previewElement.querySelector('img');
+            const img = imagePreview.querySelector('img');
             img.style.transform = `rotate(${rotation}deg)`;
         });
     };
     reader.readAsDataURL(file);
+}
+
+function updateEntryInDOM(updatedEntry) {
+    const entryElement = document.querySelector(`.compendium-entry[data-id="${updatedEntry.id}"]`);
+    if (entryElement) {
+        const nameElement = entryElement.querySelector('.entry-title');
+        if (nameElement) {
+            nameElement.textContent = updatedEntry.name || 'Unnamed Entry';
+            nameElement.title = updatedEntry.name || 'Unnamed Entry';
+        }
+        
+        const categoryElement = entryElement.querySelector('.entry-category');
+        if (categoryElement) {
+            categoryElement.textContent = updatedEntry.category_name || 'Uncategorized';
+        }
+        
+        const descriptionElement = entryElement.querySelector('.entry-description');
+        if (descriptionElement) {
+            descriptionElement.textContent = truncateText(updatedEntry.description, 80);
+        }
+        
+        const imageElement = entryElement.querySelector('.entry-image img');
+        if (imageElement && updatedEntry.image_path) {
+            imageElement.src = updatedEntry.image_path;
+            imageElement.alt = updatedEntry.name || 'Entry Image';
+        }
+        
+        logger.info(`Updated DOM for entry ID: ${updatedEntry.id}`);
+    } else {
+        logger.warn(`Entry element not found for ID: ${updatedEntry.id}`);
+    }
 }

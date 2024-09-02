@@ -1,5 +1,6 @@
 import { showError, showSuccess, showLoading, hideLoading } from './utils.js';
 import { setUserData } from './auth.js';
+import logger from './logger.js';
 
 const loginForm = document.getElementById('login-form');
 
@@ -29,7 +30,7 @@ loginForm.addEventListener('submit', async (e) => {
             throw new Error(data.error);
         }
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error('Login error:', error);
         showError(error.message || 'An error occurred during login. Please try again.');
     } finally {
         hideLoading();

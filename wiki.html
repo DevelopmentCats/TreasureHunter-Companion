@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki - Treasurehunter Companion</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/wiki.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="/" class="logo">Treasurehunter Companion</a>
+            <nav id="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Map</a></li>
+                    <li><a href="compendium.html">Compendium</a></li>
+                    <li><a href="wiki.html">Wiki</a></li>
+                    <li><a href="clan.html">Clan</a></li>
+                    <li><a href="#">Market</a></li>
+                </ul>
+            </nav>
+            <div class="user-panel">
+                <div class="notification-container">
+                    <i id="notification-icon" class="fas fa-bell"></i>
+                    <div id="notification-dropdown" class="dropdown-content">
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
+                <button class="user-panel-toggle">
+                    <img id="user-panel-avatar" src="/images/default-avatar.jpg" alt="User Avatar">
+                    <span id="user-panel-username"></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    <a href="#" id="logout-link">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="wiki-main">
+        <div class="wiki-content-wrapper">
+            <h2 class="wiki-title">Treasurehunter Wiki</h2>
+            <div id="wiki-content" class="wiki-content">
+                <!-- Wiki content will be loaded here -->
+            </div>
+            <div id="wiki-pagination" class="wiki-pagination"></div>
+        </div>
+        <aside class="wiki-sidebar">
+            <section class="wiki-search">
+                <h3><i class="fas fa-search"></i> Search</h3>
+                <div class="search-container">
+                    <input type="text" id="wiki-search-input" placeholder="Search wiki...">
+                    <button id="wiki-search-button" class="wiki-btn"><i class="fas fa-arrow-right"></i></button>
+                </div>
+            </section>
+            <section class="wiki-actions">
+                <h3><i class="fas fa-cog"></i> Actions</h3>
+                <button id="create-wiki-page" class="wiki-btn"><i class="fas fa-plus"></i> Create New Page</button>
+                <button id="recent-changes" class="wiki-btn"><i class="fas fa-history"></i> Recent Changes</button>
+            </section>
+            <section class="wiki-navigation">
+                <h3><i class="fas fa-sitemap"></i> Categories</h3>
+                <ul id="wiki-categories"></ul>
+            </section>
+        </aside>
+    </main>
+    <div id="wiki-editor-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editor-title">Create New Wiki Page</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <form id="wiki-form">
+                <input type="hidden" id="wiki-page-id">
+                <div class="form-group">
+                    <label for="wiki-title">Title:</label>
+                    <input type="text" id="wiki-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="wiki-category">Category:</label>
+                    <select id="wiki-category" required>
+                        <option value="">Select a category</option>
+                        <option value="new">+ Add new category</option>
+                    </select>
+                    <input type="text" id="new-category-input" placeholder="Enter new category name" style="display: none;">
+                    <label for="parent-category-select" style="display: none;">Parent Category (optional):</label>
+                    <select id="parent-category-select" style="display: none;"></select>
+                </div>
+                <div class="form-group">
+                    <label for="wiki-content">Content:</label>
+                    <div id="tinymce-editor"></div>
+                    <div id="char-count">Character count: 0</div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="preview-btn" class="wiki-btn wiki-btn-secondary">Preview</button>
+                    <button type="submit" class="wiki-btn wiki-btn-submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="wiki-compare-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Compare Versions</h3>
+            <div class="wiki-compare-container">
+                <div id="wiki-compare-left" class="wiki-compare-side"></div>
+                <div id="wiki-compare-right" class="wiki-compare-side"></div>
+            </div>
+            <button id="close-compare" class="wiki-btn">Close</button>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo"><img src="/images/DevCat_Logo.png" alt="DevCat Logo"></div>
+            <div class="footer-links">
+                <a href="/index.html">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+            <div class="footer-social">
+                <a href="https://github.com/DevelopmentCats"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-discord"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2024 DeveloperCats. All rights reserved.
+        </div>
+    </footer>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+    <script type="module">
+        import { setupMobileNavigation } from './js/utils.js';
+        import logger, { initializeBrowserLogger } from './js/logger.js';
+        import { isLoggedIn, checkAuth } from './js/auth.js';
+        import './js/userPanel.js';
+        import './js/wiki.js';
+        import { loadNotifications } from './js/notifications.js';
+
+        async function init() {
+            await initializeBrowserLogger();
+            setupMobileNavigation();
+            logger.info('Wiki page loaded');
+
+            if (isLoggedIn()) {
+                loadNotifications();
+            }
+
+            checkAuth();
+            // Any other wiki-specific initialization can go here
+        }
+
+        init().catch(error => console.error('Initialization error:', error));
+    </script>
+</body>
+</html>
