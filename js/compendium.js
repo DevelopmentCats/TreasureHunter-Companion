@@ -1405,7 +1405,7 @@ async function showEntryDetails(entryId) {
                 <textarea id="comment-content" required placeholder="Add a comment..."></textarea>
                 <button type="submit" class="btn btn-primary">Submit Comment</button>
             </form>
-        ` : isLoggedIn ? '<p>You do not have permission to comment.</p>' : '<p>Please <a href="/login.html">log in</a> to add comments.</p>'}
+        ` : isLoggedIn ? '<p>You do not have permission to comment.</p>' : '<p>Please <a href="../login.html">log in</a> to add comments.</p>'}
     </div>
         `;
 
