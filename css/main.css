@@ -106,13 +106,12 @@ nav ul li a:hover::after {
 main {
     max-width: 1200px;
     margin: 2rem auto;
-    padding: 2.6rem;
+    padding: 2rem;
     flex-grow: 1;
     background-color: var(--background);
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     border-radius: 12px;
     position: relative;
-    min-height: calc(100vh - 4rem - 60px); /* Adjust 60px if your footer height differs */
     display: flex;
     flex-direction: column;
 }

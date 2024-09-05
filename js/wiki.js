@@ -147,7 +147,7 @@ function toggleCategory(categoryElement) {
     }
 }
 
-async function fetchPagesForCategory(categoryId, pagesList, depth) {
+async function fetchPagesForCategory(categoryId, pagesList, depth = 0) {
     try {
         const response = await fetch(`/api/wiki/pages?categoryId=${categoryId}&limit=1000`, {
             headers: {
@@ -168,6 +168,13 @@ async function fetchPagesForCategory(categoryId, pagesList, depth) {
                 loadWikiPage(page.id);
             });
             pagesList.appendChild(pageLi);
+
+            if (page.children && page.children.length > 0) {
+                const childrenUl = document.createElement('ul');
+                childrenUl.classList.add('hidden');
+                pageLi.appendChild(childrenUl);
+                fetchPagesForCategory(page.id, childrenUl, depth + 1);
+            }
         });
     } catch (error) {
         logger.error('Error fetching pages for category:', error);
@@ -252,8 +259,10 @@ function displayPagination(totalPages, currentPage, callback) {
 }
 
 async function loadWikiPage(pageId) {
-    const contentWrapper = document.querySelector('.wiki-content-wrapper');
-    contentWrapper.classList.add('fade-out');
+    const contentContainer = document.querySelector('.wiki-content-container');
+    if (contentContainer) {
+        contentContainer.classList.add('fade-out');
+    }
 
     showLoading();
     try {
@@ -278,7 +287,9 @@ async function loadWikiPage(pageId) {
                     highlightActiveCategory(categoryElement);
                 }
             }
-            contentWrapper.classList.remove('fade-out');
+            if (contentContainer) {
+                contentContainer.classList.remove('fade-out');
+            }
         }, 300);
     } catch (error) {
         logger.error('Error loading wiki page:', error);
@@ -981,9 +992,10 @@ function initializeTinyMCE(selector = '#tinymce-editor') {
                 'advlist autolink lists link image charmap print preview anchor',
                 'searchreplace visualblocks code fullscreen',
                 'insertdatetime media table paste code help wordcount',
-                'codesample emoticons hr imagetools nonbreaking pagebreak quickbars tabfocus textpattern'
+                'codesample emoticons hr imagetools nonbreaking pagebreak quickbars tabfocus textpattern',
+                'table mermaid katex'
             ],
-            toolbar: 'undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | generatetoc insertcodesnippet insertcallout | help',
+            toolbar: 'undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | table mermaid katex | generatetoc insertcodesnippet insertcallout | help',
             toolbar_mode: 'sliding',
             contextmenu: 'link image table',
             content_style: `
@@ -1008,6 +1020,10 @@ function initializeTinyMCE(selector = '#tinymce-editor') {
                     const content = editor.getContent();
                     document.getElementById('char-count').textContent = `Character count: ${content.length}`;
                 });
+            },
+            external_plugins: {
+                'mermaid': '/js/tinymce-plugins/mermaid/plugin.min.js',
+                'katex': '/js/tinymce-plugins/katex/plugin.min.js'
             }
         });
     });

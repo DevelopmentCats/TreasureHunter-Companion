@@ -14,7 +14,7 @@ export function hideLoading() {
         logger.info('Loading element found, hiding it');
         loadingElement.style.display = 'none';
     } else {
-        logger.warn('Loading element not found');
+        logger.warning('Loading element not found');
     }
 }
 

@@ -287,7 +287,7 @@
     }
 }
 
-/* Create Clan Modal Styles */
+/* Modal Styles */
 .modal {
     display: none;
     position: fixed;
@@ -297,7 +297,7 @@
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 .modal.active {
@@ -312,8 +312,10 @@
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     animation: modalFadeIn 0.3s ease;
+    overflow-y: auto;
+    max-height: 90vh;
 }
 
 @keyframes modalFadeIn {
@@ -353,28 +355,39 @@
     color: var(--foreground);
 }
 
-#create-clan-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
+.modal-body {
+    margin-bottom: 1.5rem;
 }
 
-#create-clan-form .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.modal-body ul {
+    list-style-type: none;
+    padding-left: 0;
 }
 
-#create-clan-form label {
+.modal-body li {
+    margin-bottom: 0.5rem;
+}
+
+.modal-body h4 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--purple);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
     color: var(--cyan);
     font-weight: bold;
 }
 
-#create-clan-form input,
-#create-clan-form textarea {
+.form-group input,
+.form-group textarea,
+.form-group select {
     width: 100%;
     padding: 0.75rem;
     background-color: var(--current-line);
@@ -386,8 +399,9 @@
     box-sizing: border-box;
 }
 
-#create-clan-form input:focus,
-#create-clan-form textarea:focus {
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
     border-color: var(--purple);
     outline: none;
     box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.2);
@@ -397,9 +411,10 @@
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    margin-top: 1.5rem;
 }
 
-.form-actions button {
+.btn {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: bold;
@@ -409,22 +424,22 @@
     transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
-.form-actions .btn-primary {
+.btn-primary {
     background-color: var(--purple);
     color: var(--background);
 }
 
-.form-actions .btn-primary:hover {
+.btn-primary:hover {
     background-color: var(--pink);
     transform: translateY(-2px);
 }
 
-.form-actions .btn-secondary {
+.btn-secondary {
     background-color: var(--comment);
     color: var(--background);
 }
 
-.form-actions .btn-secondary:hover {
+.btn-secondary:hover {
     background-color: var(--current-line);
     transform: translateY(-2px);
 }

@@ -957,6 +957,68 @@ export async function getClanById(clanId) {
   return clan;
 }
 
+export async function getClanDetails(clanId) {
+  const connection = await pool.getConnection();
+  try {
+      await connection.beginTransaction();
+
+      // Get clan basic info
+      const [clan] = await connection.query(`
+          SELECT c.*, COUNT(cm.user_id) as memberCount
+          FROM clans c
+          LEFT JOIN clan_members cm ON c.id = cm.clan_id
+          WHERE c.id = ?
+          GROUP BY c.id
+      `, [clanId]);
+
+      if (!clan) {
+          throw new Error('Clan not found');
+      }
+
+      // Get clan leader
+      const [leader] = await connection.query(`
+          SELECT u.id, u.username, u.avatar
+          FROM users u
+          JOIN clan_members cm ON u.id = cm.user_id
+          WHERE cm.clan_id = ? AND cm.role = 'leader'
+      `, [clanId]);
+
+      // Get top members (e.g., top 5 by role)
+      const [topMembers] = await connection.query(`
+          SELECT u.id, u.username, u.avatar, cm.role
+          FROM users u
+          JOIN clan_members cm ON u.id = cm.user_id
+          WHERE cm.clan_id = ?
+          ORDER BY FIELD(cm.role, 'leader', 'officer', 'member')
+          LIMIT 5
+      `, [clanId]);
+
+      // Get recent activities
+      const [recentActivities] = await connection.query(`
+          SELECT ca.*, u.username
+          FROM clan_activities ca
+          JOIN users u ON ca.user_id = u.id
+          WHERE ca.clan_id = ?
+          ORDER BY ca.timestamp DESC
+          LIMIT 10
+      `, [clanId]);
+
+      await connection.commit();
+
+      return {
+          ...clan[0], // Spread the first (and only) clan object
+          leader: leader[0] || null,
+          topMembers,
+          recentActivities
+      };
+  } catch (error) {
+      await connection.rollback();
+      throw error;
+  } finally {
+      connection.release();
+  }
+}
+
 export async function updateClan(clanId, name, description) {
     return query('UPDATE clans SET name = ?, description = ? WHERE id = ?', [name, description, clanId]);
 }
@@ -1124,6 +1186,62 @@ export async function getClanActivities(clanId) {
 
 export async function createClanActivity(clanId, userId, type, description) {
   return query('INSERT INTO clan_activities (clan_id, user_id, type, description) VALUES (?, ?, ?, ?)', [clanId, userId, type, description]);
+}
+
+export async function getClanResources(clanId) {
+  return query('SELECT * FROM clan_resources WHERE clan_id = ?', [clanId]);
+}
+
+export async function updateClanResource(clanId, resourceType, amount) {
+  return query('INSERT INTO clan_resources (clan_id, resource_type, amount) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount)', [clanId, resourceType, amount]);
+}
+
+async function createClanEvent(clanId, eventData, creatorId) {
+  const { name, description, type, location, maxParticipants } = eventData;
+  let query, params;
+
+  if (type === 'one-time') {
+      query = `
+          INSERT INTO clan_events (clan_id, name, description, start_time, end_time, location, max_participants, creator_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *
+      `;
+      params = [clanId, name, description, eventData.startTime, eventData.endTime, location, maxParticipants, creatorId];
+  } else {
+      query = `
+          INSERT INTO clan_events (clan_id, name, description, type, recurrence, start_date, end_date, event_time, duration, location, max_participants, creator_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING *
+      `;
+      params = [clanId, name, description, type, eventData.recurrence, eventData.startDate, eventData.endDate, eventData.eventTime, eventData.duration, location, maxParticipants, creatorId];
+  }
+
+  const result = await pool.query(query, params);
+  return result.rows[0];
+}
+
+export async function getClanEvents(clanId) {
+  return query('SELECT * FROM clan_events WHERE clan_id = ? ORDER BY start_time', [clanId]);
+}
+
+export async function participateInEvent(eventId, userId) {
+  return query('INSERT INTO clan_event_participants (event_id, user_id) VALUES (?, ?)', [eventId, userId]);
+}
+
+export async function updateClanCustomization(clanId, bannerUrl, primaryColor, secondaryColor, motto) {
+  return query('UPDATE clans SET banner_url = ?, primary_color = ?, secondary_color = ?, motto = ? WHERE id = ?', [bannerUrl, primaryColor, secondaryColor, motto, clanId]);
+}
+
+export async function createClanAlliance(clanId1, clanId2) {
+  return query('INSERT INTO clan_alliances (clan_id1, clan_id2) VALUES (?, ?)', [clanId1, clanId2]);
+}
+
+export async function getClanAlliances(clanId) {
+  return query('SELECT * FROM clan_alliances WHERE clan_id1 = ? OR clan_id2 = ?', [clanId, clanId]);
+}
+
+export async function updateClanAllianceStatus(allianceId, status) {
+  return query('UPDATE clan_alliances SET status = ? WHERE id = ?', [status, allianceId]);
 }
 
 export { query, getCategories, getUserByUsername, getUserVote, addSystemLog };

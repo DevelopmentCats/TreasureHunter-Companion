@@ -147,7 +147,7 @@ function drawMap(mapData) {
 
         // Draw the tile background for regular elements
         if (element.type !== 'clanBase' && element.type !== 'campfire') {
-            drawTile(x, y, tileSize, element.type);
+            drawTile(ctx, x, y, tileSize, element.type);
         }
 
         // Draw special elements (campfire and clanBase)
@@ -192,14 +192,17 @@ function drawGrid() {
     }
 }
 
-function drawTile(x, y, tileSize, type) {
+function drawTile(ctx, x, y, tileSize, type, borderStyle = 'thin') {
     ctx.fillStyle = getColorForType(type);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(x + 2, y + 2, tileSize - 4, tileSize - 4, 8);
     ctx.fill();
-    ctx.stroke();
+
+    if (borderStyle !== 'none') {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = borderStyle === 'thick' ? 4 : 2;
+        ctx.stroke();
+    }
 }
 
 function drawClanBase(x, y) {
@@ -333,6 +336,8 @@ export async function initMap() {
         
         updateRequestModal.classList.add('active');
     }
+
+    setupExportButton();
 }
 
 function handleZoom(event) {
@@ -491,4 +496,169 @@ function handleMouseMove(event) {
 function handleMouseLeave() {
     tooltip.style.display = 'none';
     endPan();
+}
+
+function setupExportButton() {
+    const exportButton = document.getElementById('export-map-btn');
+    if (exportButton) {
+        exportButton.addEventListener('click', showExportModal);
+    } else {
+        console.error('Export button not found');
+    }
+}
+
+function showExportModal() {
+    const existingModal = document.getElementById('export-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'export-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h2>Export Map</h2>
+            <div class="export-options">
+                <label>
+                    <span>Map Style:</span>
+                    <select id="export-style">
+                        <option value="default">Default</option>
+                        <option value="night">Night Mode</option>
+                        <option value="sepia">Sepia</option>
+                        <option value="blueprint">Blueprint</option>
+                    </select>
+                </label>
+                <label>
+                    <input type="checkbox" id="export-grid" checked>
+                    Show Grid
+                </label>
+                <label>
+                    <input type="checkbox" id="export-labels" checked>
+                    Show Labels
+                </label>
+                <label>
+                    <span>Border Style:</span>
+                    <select id="export-border">
+                        <option value="none">None</option>
+                        <option value="thin">Thin</option>
+                        <option value="thick">Thick</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Highlight Areas:</span>
+                    <select id="export-highlight">
+                        <option value="none">None</option>
+                        <option value="safe">Safe Zones</option>
+                        <option value="danger">Danger Zones</option>
+                    </select>
+                </label>
+            </div>
+            <button id="generate-export" class="btn btn-primary">Generate Export</button>
+            <button id="close-export-modal" class="btn">Close</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('generate-export').addEventListener('click', generateMapExport);
+    document.getElementById('close-export-modal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    modal.style.display = 'flex';
+}
+
+function generateMapExport() {
+    const exportStyle = document.getElementById('export-style').value;
+    const showGrid = document.getElementById('export-grid').checked;
+    const showLabels = document.getElementById('export-labels').checked;
+    const borderStyle = document.getElementById('export-border').value;
+    const highlightAreas = document.getElementById('export-highlight').value;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const exportCtx = exportCanvas.getContext('2d');
+
+    // Apply export style
+    applyExportStyle(exportCtx, exportStyle);
+
+    // Draw map elements
+    drawMapForExport(exportCtx, showGrid, showLabels, borderStyle, highlightAreas);
+
+    // Convert canvas to image and trigger download
+    const image = exportCanvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `treasurehunter_map_export.png`;
+    link.href = image;
+    link.click();
+}
+
+function applyExportStyle(ctx, style) {
+    switch (style) {
+        case 'night':
+            ctx.fillStyle = '#1a1a2e';
+            ctx.strokeStyle = '#e94560';
+            break;
+        case 'sepia':
+            ctx.fillStyle = '#f4e8d1';
+            ctx.strokeStyle = '#704214';
+            break;
+        case 'blueprint':
+            ctx.fillStyle = '#1e3a8a';
+            ctx.strokeStyle = '#93c5fd';
+            break;
+        default:
+            ctx.fillStyle = '#44475a';
+            ctx.strokeStyle = '#f8f8f2';
+    }
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+function drawMapForExport(ctx, showGrid, showLabels, borderStyle, highlightAreas) {
+    // Apply current zoom and pan
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(zoomLevel, zoomLevel);
+
+    // Draw grid if enabled
+    if (showGrid) {
+        drawGrid(ctx);
+    }
+
+    // Draw map elements
+    mapData.forEach(element => {
+        const tileSize = 50;
+        const x = Math.floor((element.x + mapBoundary) / tileSize) * tileSize;
+        const y = Math.floor((mapBoundary - element.y) / tileSize) * tileSize;
+
+        if (element.type !== 'clanBase' && element.type !== 'campfire') {
+            drawTile(ctx, x, y, tileSize, element.type, borderStyle);
+        }
+
+        if (element.type === 'clanBase') {
+            drawClanBase(ctx, element.x, element.y);
+        } else if (element.type === 'campfire') {
+            drawCampfire(ctx, element.x, element.y);
+        }
+
+        if (showLabels && element.type !== 'clanBase' && element.type !== 'campfire') {
+            drawLabel(ctx, x, y, tileSize, element.type);
+        }
+    });
+
+    // Draw highlight areas
+    if (highlightAreas === 'safe') {
+        drawHighlightArea(ctx, 150, 150, 600, 'rgba(0, 255, 0, 0.1)');
+    } else if (highlightAreas === 'danger') {
+        drawHighlightArea(ctx, 300, 300, 300, 'rgba(255, 0, 0, 0.1)');
+    }
+
+    ctx.restore();
+}
+
+function drawHighlightArea(ctx, x, y, size, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, 8);
+    ctx.fill();
 }

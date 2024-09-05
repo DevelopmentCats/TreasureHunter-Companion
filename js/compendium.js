@@ -1130,10 +1130,10 @@ function resetForm() {
         try {
             editor.setContent('');
         } catch (error) {
-            logger.warn('Error resetting TinyMCE content:', error);
+            logger.warning('Error resetting TinyMCE content:', error);
         }
     } else {
-        logger.warn('TinyMCE editor not initialized during form reset');
+        logger.warning('TinyMCE editor not initialized during form reset');
     }
     
     document.getElementById('image-preview').innerHTML = '';
@@ -1344,7 +1344,7 @@ async function showEntryDetails(entryId) {
             if (response.ok) {
                 submitter = await response.json();
             } else {
-                logger.warn(`Failed to fetch submitter info: ${response.status}`);
+                logger.warning(`Failed to fetch submitter info: ${response.status}`);
             }
         } catch (error) {
             logger.error('Error fetching submitter info:', error);
@@ -1809,7 +1809,7 @@ async function handleEditFormSubmit(event, entryId) {
         if (updatedEntry) {
             updateEntryInDOM(updatedEntry);
         } else {
-            logger.warn(`Updated entry not found in allEntries: ${entryId}`);
+            logger.warning(`Updated entry not found in allEntries: ${entryId}`);
         }
 
         // Re-initialize listeners after update
@@ -2036,7 +2036,7 @@ function setupEditImageDropZone() {
             // Add this line to update the FormData
             document.getElementById('edit-entry-form').elements['image'].files = e.target.files;
         } else {
-            logger.warn('No file selected');
+            logger.warning('No file selected');
         }
     });
 
@@ -2104,6 +2104,6 @@ function updateEntryInDOM(updatedEntry) {
         
         logger.info(`Updated DOM for entry ID: ${updatedEntry.id}`);
     } else {
-        logger.warn(`Entry element not found for ID: ${updatedEntry.id}`);
+        logger.warning(`Entry element not found for ID: ${updatedEntry.id}`);
     }
 }

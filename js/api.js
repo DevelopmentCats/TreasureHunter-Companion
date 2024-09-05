@@ -251,6 +251,18 @@ export async function getClan(clanId) {
     return fetchWithAuth(`/api/clans/${clanId}`);
 }
 
+export async function getClanDetails(clanId) {
+    const response = await fetch(`/api/clans/${clanId}/details`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    });
+    if (!response.ok) {
+        throw new Error('Failed to fetch clan details');
+    }
+    return response.json();
+}
+
 export async function updateClan(clanId, name, description) {
     return fetchWithAuth(`/api/clans/${clanId}`, {
         method: 'PUT',
@@ -320,6 +332,59 @@ export async function rejectClanJoinRequest(clanId, userId) {
 
 export async function getClanActivities(clanId) {
     return fetchWithAuth(`/api/clans/${clanId}/activities`);
+}
+
+export async function getClanResources(clanId) {
+    return fetchWithAuth(`/api/clans/${clanId}/resources`);
+}
+
+export async function updateClanResource(clanId, resourceType, amount) {
+    return fetchWithAuth(`/api/clans/${clanId}/resources`, {
+        method: 'POST',
+        body: JSON.stringify({ resourceType, amount }),
+    });
+}
+
+export async function createClanEvent(clanId, eventData) {
+    return fetchWithAuth(`/api/clans/${clanId}/events`, {
+        method: 'POST',
+        body: JSON.stringify(eventData),
+    });
+}
+
+export async function getClanEvents(clanId) {
+    return fetchWithAuth(`/api/clans/${clanId}/events`);
+}
+
+export async function participateInEvent(eventId) {
+    return fetchWithAuth(`/api/clan-events/${eventId}/participate`, {
+        method: 'POST',
+    });
+}
+
+export async function updateClanCustomization(clanId, bannerUrl, primaryColor, secondaryColor, motto) {
+    return fetchWithAuth(`/api/clans/${clanId}/customization`, {
+        method: 'PUT',
+        body: JSON.stringify({ bannerUrl, primaryColor, secondaryColor, motto }),
+    });
+}
+
+export async function createClanAlliance(clanId1, clanId2) {
+    return fetchWithAuth('/api/clan-alliances', {
+        method: 'POST',
+        body: JSON.stringify({ clanId1, clanId2 }),
+    });
+}
+
+export async function getClanAlliances(clanId) {
+    return fetchWithAuth(`/api/clans/${clanId}/alliances`);
+}
+
+export async function updateClanAllianceStatus(allianceId, status) {
+    return fetchWithAuth(`/api/clan-alliances/${allianceId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+    });
 }
 
 // Notification-related functions

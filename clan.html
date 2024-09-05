@@ -59,6 +59,10 @@
                         <li><a href="#overview" class="active">Overview</a></li>
                         <li><a href="#members">Members</a></li>
                         <li><a href="#activities">Recent Activities</a></li>
+                        <li><a href="#resources">Resources</a></li>
+                        <li><a href="#events">Events</a></li>
+                        <li><a href="#customization">Customization</a></li>
+                        <li><a href="#alliances">Alliances</a></li>
                         <li><a href="#all-clans">All Clans</a></li>
                     </ul>
                 </nav>
@@ -79,6 +83,25 @@
                 <section id="activities" class="clan-section">
                     <h3>Recent Activities</h3>
                     <ul id="clan-activities-list" class="activity-list"></ul>
+                </section>
+                <section id="resources" class="clan-section">
+                    <h3>Clan Resources</h3>
+                    <div id="clan-resources"></div>
+                    <button id="contribute-resource-btn" class="btn btn-primary">Contribute Resource</button>
+                </section>
+                <section id="events" class="clan-section">
+                    <h3>Clan Events</h3>
+                    <div id="clan-events"></div>
+                    <button id="create-event-btn" class="btn btn-primary">Create Event</button>
+                </section>
+                <section id="customization" class="clan-section">
+                    <h3>Clan Customization</h3>
+                    <div id="clan-customization"></div>
+                </section>
+                <section id="alliances" class="clan-section">
+                    <h3>Clan Alliances</h3>
+                    <div id="clan-alliances"></div>
+                    <button id="propose-alliance-btn" class="btn btn-primary">Propose Alliance</button>
                 </section>
                 <section id="all-clans" class="clan-section">
                     <h3>All Clans</h3>
@@ -123,7 +146,129 @@
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Create Clan</button>
-                    <button type="button" class="btn btn-secondary" id="cancel-create-clan">Cancel</button>
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="create-event-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Clan Event</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="create-event-form">
+                <div class="form-group">
+                    <label for="event-name">Event Name:</label>
+                    <input type="text" id="event-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-description">Description:</label>
+                    <textarea id="event-description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="event-type">Event Type:</label>
+                    <select id="event-type" required>
+                        <option value="one-time">One-time Event</option>
+                        <option value="recurring">Recurring Event</option>
+                    </select>
+                </div>
+                <div id="one-time-event-fields">
+                    <div class="form-group">
+                        <label for="event-start">Start Time:</label>
+                        <input type="datetime-local" id="event-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-end">End Time:</label>
+                        <input type="datetime-local" id="event-end" required>
+                    </div>
+                </div>
+                <div id="recurring-event-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="event-recurrence">Recurrence:</label>
+                        <select id="event-recurrence" required>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-time">Event Time:</label>
+                        <input type="time" id="event-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-duration">Duration (hours):</label>
+                        <input type="number" id="event-duration" min="0.5" step="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-end-type">End Type:</label>
+                        <select id="event-end-type" required>
+                            <option value="never">Never</option>
+                            <option value="on-date">On Date</option>
+                        </select>
+                    </div>
+                    <div id="event-end-date-field" style="display: none;">
+                        <div class="form-group">
+                            <label for="event-end-date">End Date:</label>
+                            <input type="date" id="event-end-date">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-location">Location:</label>
+                    <input type="text" id="event-location">
+                </div>
+                <div class="form-group">
+                    <label for="event-max-participants">Max Participants:</label>
+                    <input type="number" id="event-max-participants" min="1">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Event</button>
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="contribute-resource-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Contribute Resource</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="contribute-resource-form">
+                <div class="form-group">
+                    <label for="resource-type">Resource Type:</label>
+                    <select id="resource-type" required>
+                        <option value="gold">Gold</option>
+                        <option value="wood">Wood</option>
+                        <option value="stone">Stone</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="resource-amount">Amount:</label>
+                    <input type="number" id="resource-amount" required min="1">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Contribute</button>
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="propose-alliance-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Propose Alliance</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="propose-alliance-form">
+                <div class="form-group">
+                    <label for="alliance-clan-id">Clan ID to Ally With:</label>
+                    <input type="number" id="alliance-clan-id" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Propose Alliance</button>
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
                 </div>
             </form>
         </div>
