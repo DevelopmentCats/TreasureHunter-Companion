@@ -1,21 +1,20 @@
 module.exports = {
   env: {
-    browser: true, // Set to true if you're targeting browser environments
-    node: true,    // Set to true if you're targeting Node.js environments
-    es2021: true,  // Enable ECMAScript 2021 features
+    browser: true,
+    node: true,
+    es2021: true,
   },
   extends: [
-    'eslint:recommended', // Use the recommended ESLint rules
+    'airbnb', // Use Airbnb's base JS style guide
+    'eslint:recommended',
   ],
   parserOptions: {
-    ecmaVersion: 12, // Use ECMAScript 2021 syntax
-    sourceType: 'module', // Enable ES6 modules
+    ecmaVersion: 12,
+    sourceType: 'module',
   },
   rules: {
-    // Add or override rules here
-    'no-console': 'warn', // Warn on console.log statements
-    'no-unused-vars': 'warn', // Warn on unused variables
-    'semi': ['error', 'always'], // Enforce semicolons
-    'quotes': ['error', 'single'], // Enforce single quotes
+    // You can override specific rules here
+    'no-console': 'warn',
+    'no-unused-vars': 'warn',
   },
 };

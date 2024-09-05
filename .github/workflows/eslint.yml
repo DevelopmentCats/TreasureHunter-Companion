@@ -1,19 +1,9 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-# ESLint is a tool for identifying and reporting on patterns
-# found in ECMAScript/JavaScript code.
-# More details at https://github.com/eslint/eslint
-# and https://eslint.org
-
 name: ESLint
 
 on:
   push:
     branches: [ "develop" ]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "develop" ]
   schedule:
     - cron: '44 0 * * 3'
@@ -25,26 +15,30 @@ jobs:
     permissions:
       contents: read
       security-events: write
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ESLint
+      - name: Install ESLint and Airbnb configuration
         run: |
           npm install eslint@8.10.0
+          npm install eslint-config-airbnb eslint-plugin-import eslint-plugin-jsx-a11y eslint-plugin-react eslint-plugin-react-hooks --save-dev
           npm install @microsoft/eslint-formatter-sarif@2.1.7
 
       - name: Run ESLint
-        run: npx eslint .
-          --config .eslintrc.cjs
-          --ext .js,.jsx,.ts,.tsx
-          --format @microsoft/eslint-formatter-sarif
-          --output-file eslint-results.sarif
-        continue-on-error: true
+        run: |
+          npx eslint . \
+          --config .eslintrc.cjs \
+          --ext .js,.jsx \
+          --format @microsoft/eslint-formatter-sarif \
+          --output-file ./eslint-results.sarif
+
+      - name: List output files
+        run: ls -lah ./eslint-results.sarif # Check if file is generated
 
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: eslint-results.sarif
+          sarif_file: ./eslint-results.sarif
           wait-for-processing: true
