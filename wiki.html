@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="css/wiki.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js"></script>
 </head>
 <body>
     <header>
@@ -47,13 +50,6 @@
         </div>
     </header>
     <main class="wiki-main">
-        <div class="wiki-content-wrapper">
-            <h2 class="wiki-title">Treasurehunter Wiki</h2>
-            <div id="wiki-content" class="wiki-content">
-                <!-- Wiki content will be loaded here -->
-            </div>
-            <div id="wiki-pagination" class="wiki-pagination"></div>
-        </div>
         <aside class="wiki-sidebar">
             <section class="wiki-search">
                 <h3><i class="fas fa-search"></i> Search</h3>
@@ -72,6 +68,13 @@
                 <ul id="wiki-categories"></ul>
             </section>
         </aside>
+        <div class="wiki-content-container">
+            <h2 class="wiki-title">Treasurehunter Wiki</h2>
+            <div id="wiki-content" class="wiki-content">
+                <!-- Wiki content will be loaded here -->
+            </div>
+            <div id="wiki-pagination" class="wiki-pagination"></div>
+        </div>
     </main>
     <div id="wiki-editor-modal" class="modal hidden">
         <div class="modal-content">

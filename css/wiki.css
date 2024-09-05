@@ -1,28 +1,48 @@
 .wiki-main {
     display: flex;
-    flex-direction: row;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 2rem auto;
-    padding: 20px;
-    gap: 20px;
+    min-height: calc(88vh - 4rem);
     background-color: var(--background);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
+    overflow: hidden;
+}
+
+.wiki-sidebar {
+    flex: 0 0 300px;
+    background-color: var(--current-line);
+    padding: 2rem;
+    height: 1000px; /* Set a fixed height */
+    overflow-y: auto;
+    border-right: 1px solid var(--comment);
+    display: flex;
+    flex-direction: column;
+}
+
+.wiki-content-container {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    height: 1000px;
+    display: flex;
+    flex-direction: column;
 }
 
 .wiki-title {
-    margin-top: 0;
+    color: var(--purple);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--purple);
+    padding-bottom: 0.5rem;
 }
 
 .wiki-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    background-color: var(--current-line);
-    padding: 15px;
-    border-radius: 8px;
+    margin-bottom: 1rem;
 }
 
 #wiki-actions {
@@ -43,18 +63,12 @@
 }
 
 #wiki-search-button {
-    padding: 8px;
+    padding: 0.5rem 1rem;
     background-color: var(--purple);
     color: var(--background);
     border: none;
     border-radius: 0 4px 4px 0;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 36px;
-    box-sizing: border-box;
 }
 
 #wiki-search-button i {
@@ -62,80 +76,55 @@
 }
 
 .wiki-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    width: 100%;
-    padding: 10px;
     margin-bottom: 10px;
+    padding: 0.5rem 1rem;
     background-color: var(--purple);
     color: var(--background);
     border: none;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    font-size: 0.9rem;
 }
 
 .wiki-btn i {
-    margin-right: 10px;
+    margin-right: 0.5rem;
 }
 
 .wiki-btn:hover {
     background-color: var(--pink);
 }
 
-.wiki-content-wrapper {
-    flex: 1;
-    min-width: 0;
-    padding: 20px;
-    background-color: var(--background);
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    order: 2;
-    opacity: 1;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.wiki-content-wrapper.fade-out {
-    opacity: 0;
-}
-
 .wiki-content {
     background-color: var(--background);
-    padding: 30px;
+    padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.wiki-sidebar {
-    flex: 0 0 280px;
-    background-color: var(--current-line);
-    padding: 20px;
-    border-radius: 8px;
-    height: fit-content;
-    position: sticky;
-    top: 20px;
-    order: 1;
 }
 
 .wiki-sidebar section {
-    margin-bottom: 30px;
+    margin-bottom: 2rem;
 }
 
 .wiki-sidebar h3 {
     color: var(--purple);
-    margin-bottom: 15px;
+    margin-bottom: 1rem;
     font-size: 1.2rem;
     display: flex;
     align-items: center;
+    border-bottom: 2px solid var(--purple);
+    padding-bottom: 0.5rem;
 }
 
 .wiki-sidebar h3 i {
-    margin-right: 10px;
+    margin-right: 0.5rem;
 }
 
 .search-container {
     display: flex;
-    align-items: stretch;
+    margin-bottom: 1rem;
 }
 
 #wiki-categories {
@@ -144,9 +133,17 @@
 }
 
 #wiki-categories li {
-    cursor: pointer;
-    padding: 8px 0;
+    margin-bottom: 0.5rem;
+}
+
+#wiki-categories a {
+    color: var(--foreground);
+    text-decoration: none;
     transition: color 0.3s ease;
+}
+
+#wiki-categories a:hover {
+    color: var(--pink);
 }
 
 #wiki-categories .home {
@@ -168,8 +165,7 @@
 }
 
 #wiki-categories .page {
-    color: var(--foreground);
-    padding-left: 15px;
+    padding-left: 1rem;
 }
 
 #wiki-categories .hidden {
@@ -190,7 +186,7 @@
 }
 
 .wiki-search {
-    margin-bottom: 20px;
+    flex: 0 0 auto;
 }
 
 .wiki-pagination {
@@ -206,20 +202,18 @@
 @media screen and (max-width: 768px) {
     .wiki-main {
         flex-direction: column;
-        padding: 10px;
     }
 
     .wiki-sidebar {
-        position: static;
+        flex: none;
         width: 100%;
-        margin-bottom: 20px;
-        order: 1;
+        border-right: none;
+        border-bottom: 1px solid var(--comment);
     }
 
-    .wiki-content-wrapper {
+    .wiki-content-container {
         width: 100%;
-        padding: 10px;
-        order: 2;
+        padding: 1rem;
     }
 
     .wiki-sidebar .search-container {
@@ -246,34 +240,30 @@
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(0, 0, 0, 0.5);
 }
 
 .modal.active {
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .modal-content {
     background-color: var(--background);
-    margin: 5% auto;
-    padding: 30px;
-    border: 1px solid var(--comment);
-    width: 90%;
-    max-width: 1200px;
-    max-height: 90vh;
+    padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
 }
 
 .modal-header h3 {
@@ -283,9 +273,9 @@
 
 .close-modal {
     color: var(--comment);
-    font-size: 28px;
-    font-weight: bold;
+    font-size: 1.5rem;
     cursor: pointer;
+    transition: color 0.3s ease;
 }
 
 .close-modal:hover {
@@ -327,7 +317,7 @@
 }
 
 #tinymce-editor {
-    min-height: 500px;
+    min-height: 300px;
 }
 
 .tox-tinymce {
@@ -359,19 +349,20 @@
 
 .wiki-toc {
     background-color: var(--current-line);
-    padding: 15px;
+    padding: 1rem;
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
 }
 
 .wiki-toc h4 {
-    margin-top: 0;
     color: var(--purple);
+    margin-top: 0;
+    margin-bottom: 0.5rem;
 }
 
 .wiki-toc ul {
     list-style-type: none;
-    padding-left: 20px;
+    padding-left: 1rem;
 }
 
 .wiki-toc a {
@@ -418,7 +409,17 @@
 #wiki-form {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    gap: 1rem;
+}
+
+#wiki-form input,
+#wiki-form select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--comment);
+    border-radius: 4px;
+    background-color: var(--background);
+    color: var(--foreground);
 }
 
 #wiki-form > :last-child {
@@ -452,7 +453,12 @@ code {
 }
 
 .wiki-actions {
-    margin-bottom: 20px;
+    flex: 0 0 auto;
+}
+
+.wiki-navigation {
+    flex: 1 1 auto;
+    overflow-y: auto;
 }
 
 .wiki-navigation ul {
@@ -478,4 +484,19 @@ code {
 .profile-username-link:hover {
     color: var(--pink);
     text-shadow: 0 0 8px rgba(255, 121, 198, 0.5);
+}
+
+.wiki-main {
+    display: flex !important;
+    flex-direction: row !important;
+}
+
+.wiki-sidebar {
+    flex: 0 0 300px !important;
+    order: -1 !important;
+}
+
+.wiki-content-container {
+    flex: 1 !important;
+    order: 1 !important;
 }

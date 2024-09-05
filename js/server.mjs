@@ -697,7 +697,7 @@ app.post('/api/admin/approve-compendium-entry/:id', authenticateToken, requirePe
         // Update the pending entry with the correct category ID
         pendingEntry.category_id = categoryId;
       } else {
-        await logger.warn(`No category name found for pending entry ${id}. Setting category to null.`);
+        await logger.warning(`No category name found for pending entry ${id}. Setting category to null.`);
         pendingEntry.category_id = null;
       }
 
@@ -851,7 +851,7 @@ app.put('/api/compendium/:id', authenticateToken, imageUpload.single('image'), a
             }
             entryData.category = category.id;
         } else {
-            await logger.warn(`No category name found for entry ${id}. Setting category to null.`);
+            await logger.warning(`No category name found for entry ${id}. Setting category to null.`);
             entryData.category = null;
         }
 
@@ -1278,7 +1278,9 @@ app.get('/api/clans/:clanId', authenticateToken, async (req, res) => {
         if (!clan) {
             return res.status(404).json({ error: getErrorMessage('NOT_FOUND'), details: 'Clan not found' });
         }
-        res.json(clan);
+        const members = await db.getClanMembers(clanId);
+        const activities = await db.getClanActivities(clanId);
+        res.json({ ...clan, members, activities });
     } catch (error) {
         await logger.error('Error fetching clan:', error);
         res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
@@ -1287,9 +1289,9 @@ app.get('/api/clans/:clanId', authenticateToken, async (req, res) => {
 
 app.put('/api/clans/:clanId', authenticateToken, async (req, res) => {
     const { clanId } = req.params;
-    const { name, description } = req.body;
+    const { name, description, bannerUrl, primaryColor, secondaryColor, motto } = req.body;
     try {
-        const updatedClan = await db.updateClan(clanId, name, description);
+        const updatedClan = await db.updateClan(clanId, name, description, bannerUrl, primaryColor, secondaryColor, motto);
         res.json({ message: 'Clan updated successfully', clan: updatedClan });
     } catch (error) {
         await logger.error('Error updating clan:', error);
@@ -1305,6 +1307,21 @@ app.delete('/api/clans/:clanId', authenticateToken, async (req, res) => {
     } catch (error) {
         await logger.error('Error deleting clan:', error);
         res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.get('/api/clans/:clanId/details', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    try {
+        const clanDetails = await db.getClanDetails(clanId);
+        res.json(clanDetails);
+    } catch (error) {
+        await logger.error('Error fetching clan details:', error);
+        if (error.message === 'Clan not found') {
+            res.status(404).json({ error: getErrorMessage('NOT_FOUND'), details: 'Clan not found' });
+        } else {
+            res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+        }
     }
 });
 
@@ -1454,6 +1471,109 @@ app.put('/api/clans/:clanId/members/:userId/role', authenticateToken, async (req
         res.json({ message: 'Member role updated successfully' });
     } catch (error) {
         await logger.error('Error updating clan member role:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.get('/api/clans/:clanId/resources', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    try {
+        const resources = await db.getClanResources(clanId);
+        res.json(resources);
+    } catch (error) {
+        await logger.error('Error fetching clan resources:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.post('/api/clans/:clanId/resources', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    const { resourceType, amount } = req.body;
+    try {
+        const updatedResource = await db.updateClanResource(clanId, resourceType, amount);
+        res.json(updatedResource);
+    } catch (error) {
+        await logger.error('Error updating clan resource:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.get('/api/clans/:clanId/events', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    try {
+        const events = await db.getClanEvents(clanId);
+        res.json(events);
+    } catch (error) {
+        await logger.error('Error fetching clan events:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.post('/api/clans/:clanId/events', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    const eventData = req.body;
+    try {
+        const newEvent = await db.createClanEvent(clanId, eventData, req.user.id);
+        res.status(201).json(newEvent);
+    } catch (error) {
+        await logger.error('Error creating clan event:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.post('/api/clan-events/:eventId/participate', authenticateToken, async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        await db.participateInClanEvent(eventId, req.user.id);
+        res.json({ message: 'Successfully joined the event' });
+    } catch (error) {
+        await logger.error('Error participating in clan event:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.put('/api/clans/:clanId/customization', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    const { bannerUrl, primaryColor, secondaryColor, motto } = req.body;
+    try {
+        const updatedClan = await db.updateClanCustomization(clanId, bannerUrl, primaryColor, secondaryColor, motto);
+        res.json(updatedClan);
+    } catch (error) {
+        await logger.error('Error updating clan customization:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.post('/api/clan-alliances', authenticateToken, async (req, res) => {
+    const { clanId1, clanId2 } = req.body;
+    try {
+        const newAlliance = await db.createClanAlliance(clanId1, clanId2);
+        res.status(201).json(newAlliance);
+    } catch (error) {
+        await logger.error('Error creating clan alliance:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.get('/api/clans/:clanId/alliances', authenticateToken, async (req, res) => {
+    const { clanId } = req.params;
+    try {
+        const alliances = await db.getClanAlliances(clanId);
+        res.json(alliances);
+    } catch (error) {
+        await logger.error('Error fetching clan alliances:', error);
+        res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
+    }
+});
+
+app.put('/api/clan-alliances/:allianceId', authenticateToken, async (req, res) => {
+    const { allianceId } = req.params;
+    const { status } = req.body;
+    try {
+        const updatedAlliance = await db.updateClanAllianceStatus(allianceId, status);
+        res.json(updatedAlliance);
+    } catch (error) {
+        await logger.error('Error updating clan alliance status:', error);
         res.status(500).json({ error: getErrorMessage('SERVER_ERROR'), details: error.message });
     }
 });

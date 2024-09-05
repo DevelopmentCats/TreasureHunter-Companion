@@ -1,4 +1,3 @@
-import { showLoading, hideLoading, showError, showSuccess } from './utils.js';
 import * as api from './api.js';
 import { getErrorMessage } from './errorHandler.js';
 import logger from './logger.js';
@@ -787,4 +786,3 @@ function debounce(func, delay) {
         timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
 }
-
