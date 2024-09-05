@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node js/server.mjs",
+    "dev": "nodemon js/server.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
