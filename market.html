@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Treasurehunter Companion</title>
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/settings.css">
+    <title>Treasurehunter Companion</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/home.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
@@ -46,29 +46,7 @@
             </div>
         </div>
     </header>
-    <main class="settings-main">
-        <h2>User Settings</h2>
-        <div class="settings-container">
-            <form id="settings-form">
-                <div class="form-group">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-password">New Password:</label>
-                    <input type="password" id="new-password" name="new-password">
-                </div>
-                <div class="form-group">
-                    <label for="confirm-password">Confirm New Password:</label>
-                    <input type="password" id="confirm-password" name="confirm-password">
-                </div>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-            </form>
-        </div>
+    <main>
     </main>
     <footer>
         <div class="footer-content">
@@ -89,29 +67,41 @@
             &copy; 2024 DeveloperCats. All rights reserved.
         </div>
     </footer>
+    <div class="loading-animation">
+        <div class="spinner"></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
     <script type="module">
-        import { setupMobileNavigation } from './js/utils.js';
+        import { setupMobileNavigation, hideLoading } from './js/utils.js';
         import logger, { initializeBrowserLogger } from './js/logger.js';
         import { isLoggedIn, checkAuth } from './js/auth.js';
         import './js/userPanel.js';
-        import './js/settings.js';
         import { loadNotifications } from './js/notifications.js';
 
         async function init() {
             await initializeBrowserLogger();
             setupMobileNavigation();
-            logger.info('Settings page loaded');
+            hideLoading();
+            logger.info('Home page loaded');
 
-            if (isLoggedIn()) {
+            console.log('Checking login status...');
+            const loggedIn = isLoggedIn();
+            console.log('User logged in:', loggedIn);
+
+            if (loggedIn) {
                 loadNotifications();
+            }
+
+            const ctaSection = document.querySelector('.cta-section');
+            if (ctaSection) {
+                ctaSection.style.display = loggedIn ? 'none' : 'block';
+                console.log('CTA section display:', ctaSection.style.display);
             } else {
-                window.location.href = 'login.html';
+                console.log('CTA section not found');
             }
 
             checkAuth();
-            // Any other settings-specific initialization can go here
         }
 
         init().catch(error => console.error('Initialization error:', error));
