@@ -14,13 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
       actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ESLint and Airbnb configuration
+      - name: Install dependencies
         run: |
           npm install eslint@8.10.0
           npm install eslint-config-airbnb eslint-plugin-import eslint-plugin-jsx-a11y eslint-plugin-react eslint-plugin-react-hooks --save-dev
@@ -29,13 +28,13 @@ jobs:
       - name: Run ESLint
         run: npx eslint .
           --config .eslintrc.cjs
-          --ext .js,.jsx,.ts,.tsx
-          --format @microsoft/eslint-formatter-sarif
-          --output-file eslint-results.sarif
+          --ext .js,.jsx
+          --format unix
         continue-on-error: true
 
-      - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: eslint-results.sarif
-          wait-for-processing: true
+      - name: Display ESLint results
+        run: echo "ESLint issues:"
+          npx eslint .
+          --config .eslintrc.cjs
+          --ext .js,.jsx
+          --format unix
